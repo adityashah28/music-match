@@ -7,10 +7,10 @@ import { isInAppBrowser, preferredExternalBrowser } from "@/lib/inAppBrowser";
 import { InAppBrowserNotice } from "@/components/InAppBrowserNotice";
 
 const primaryClass =
-  "font-sans inline-flex min-h-12 w-full items-center justify-center gap-2.5 rounded-full bg-[var(--foreground)] px-6 text-center text-base font-normal leading-none text-white transition duration-200 ease-out hover:bg-neutral-800 active:scale-[0.99] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)] disabled:pointer-events-none disabled:opacity-40";
+  "font-sans inline-flex min-h-12 w-full cursor-pointer items-center justify-center gap-2.5 rounded-full bg-[var(--foreground)] px-6 text-center text-base font-normal leading-none text-white transition duration-200 ease-out hover:bg-neutral-700 active:scale-[0.99] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)] disabled:pointer-events-none disabled:opacity-40";
 
 const headerClass =
-  "font-sans inline-flex min-h-10 items-center justify-center gap-2 rounded-full bg-[var(--foreground)] px-4 text-center text-sm font-normal leading-none text-white transition hover:bg-neutral-800 disabled:pointer-events-none disabled:opacity-40";
+  "font-sans inline-flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-full bg-[var(--foreground)] px-4 text-center text-sm font-normal leading-none text-white transition duration-200 ease-out hover:bg-neutral-700 active:scale-[0.99] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)] disabled:pointer-events-none disabled:opacity-40";
 
 type Props = {
   /** Visual size — landing uses full-width primary; header uses compact. */
@@ -123,11 +123,7 @@ export function GoogleSignInButton({
         disabled={busy || inApp}
         className={`${shell}${className ? ` ${className}` : ""}`}
       >
-        {!inApp ? (
-          <span className="inline-flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full bg-white">
-            <GoogleMark />
-          </span>
-        ) : null}
+        {!inApp ? <GoogleMark className="shrink-0" /> : null}
         <Label>{busy ? "Opening Google…" : "Continue with Google"}</Label>
       </button>
       {error ? (

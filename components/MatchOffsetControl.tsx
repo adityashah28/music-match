@@ -80,7 +80,7 @@ export function MatchOffsetControl({
           }
           disabled={!canMinus}
           onClick={() => nudge(-1)}
-          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface)] text-xl leading-none text-[var(--foreground)] transition enabled:hover:border-[var(--foreground)] enabled:active:scale-95 disabled:opacity-35"
+          className="inline-flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface)] text-xl leading-none text-[var(--foreground)] transition duration-200 ease-out enabled:hover:border-[var(--foreground)] enabled:hover:bg-[var(--surface-soft)] enabled:active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)] disabled:opacity-35"
         >
           <span className="chip-label">−</span>
         </button>
@@ -91,7 +91,7 @@ export function MatchOffsetControl({
           }
           disabled={!canPlus}
           onClick={() => nudge(1)}
-          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface)] text-xl leading-none text-[var(--foreground)] transition enabled:hover:border-[var(--foreground)] enabled:active:scale-95 disabled:opacity-35"
+          className="inline-flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface)] text-xl leading-none text-[var(--foreground)] transition duration-200 ease-out enabled:hover:border-[var(--foreground)] enabled:hover:bg-[var(--surface-soft)] enabled:active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)] disabled:opacity-35"
         >
           <span className="chip-label">+</span>
         </button>
@@ -125,7 +125,7 @@ function EndValue({
         aria-pressed={selected}
         aria-label={`${caption} ${value}${selected ? ", selected" : ". Tap to adjust."}`}
         onClick={onSelect}
-        className={`mt-1 min-w-[4.75rem] border-b-2 pb-0.5 text-center transition ${AGE_DISPLAY} ${
+        className={`mt-1 min-w-[4.75rem] cursor-pointer border-b-2 pb-0.5 text-center transition duration-200 ease-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)] ${AGE_DISPLAY} ${
           selected
             ? "border-[var(--foreground)] text-[var(--foreground)]"
             : "border-transparent text-[var(--muted)] hover:text-[var(--foreground)]"

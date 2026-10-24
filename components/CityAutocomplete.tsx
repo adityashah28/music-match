@@ -156,7 +156,7 @@ export function CityAutocomplete({
             <li key={city.id}>
               <button
                 type="button"
-                className="w-full px-4 py-3 text-left text-base font-normal text-[var(--foreground)] hover:bg-[var(--surface-soft)]"
+                className="w-full cursor-pointer px-4 py-3 text-left text-base font-normal text-[var(--foreground)] transition duration-200 ease-out hover:bg-[var(--surface-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--foreground)]"
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => pick(city)}
               >

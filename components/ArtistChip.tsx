@@ -33,9 +33,9 @@ export function ArtistChip({
             onRemove();
           }}
           aria-label={`Remove ${name}`}
-          className="absolute -right-2 -top-2 grid h-11 w-11 place-items-center"
+          className="group absolute -right-2 -top-2 grid h-11 w-11 cursor-pointer place-items-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]"
         >
-          <span className="grid h-6 w-6 place-items-center rounded-full bg-[var(--foreground)] text-base leading-none text-white">
+          <span className="grid h-6 w-6 place-items-center rounded-full bg-[var(--foreground)] text-base leading-none text-white transition duration-200 ease-out group-hover:bg-neutral-700">
             <span className="btn-label">×</span>
           </span>
         </button>
@@ -65,7 +65,7 @@ export function ArtistResult({
       type="button"
       onClick={onPick}
       disabled={picked}
-      className="flex min-h-14 w-full items-center gap-3 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-3 text-left transition hover:bg-[var(--surface-soft)] disabled:opacity-60"
+      className="flex min-h-14 w-full cursor-pointer items-center gap-3 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-3 text-left transition duration-200 ease-out hover:border-[var(--foreground)] hover:bg-[var(--surface-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)] disabled:pointer-events-none disabled:opacity-60"
     >
       {photo ? (
         <ArtistImage

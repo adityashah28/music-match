@@ -31,7 +31,7 @@ export function MatchActions({
         type="button"
         onClick={onSkip}
         disabled={busy}
-        className="font-sans inline-flex min-h-12 w-full items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface)] px-6 text-center text-base font-normal leading-none text-[var(--foreground)] transition duration-200 ease-out hover:bg-[var(--surface-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)] disabled:pointer-events-none disabled:opacity-40"
+        className="font-sans inline-flex min-h-12 w-full cursor-pointer items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface)] px-6 text-center text-base font-normal leading-none text-[var(--foreground)] transition duration-200 ease-out hover:border-[var(--foreground)] hover:bg-[var(--surface-soft)] active:scale-[0.99] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)] disabled:pointer-events-none disabled:opacity-40"
       >
         <span className="btn-label">Skip</span>
       </button>

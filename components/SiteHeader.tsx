@@ -91,7 +91,7 @@ export function SiteHeader() {
     return (
       <Link
         href={cta.href}
-        className={`font-sans min-h-10 items-center justify-center rounded-full bg-[var(--foreground)] px-4 text-center text-sm font-normal leading-none text-white transition hover:bg-neutral-800 ${
+        className={`font-sans min-h-10 cursor-pointer items-center justify-center rounded-full bg-[var(--foreground)] px-4 text-center text-sm font-normal leading-none text-white transition duration-200 ease-out hover:bg-neutral-700 active:scale-[0.99] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)] ${
           opts.mobile
             ? "mt-1 inline-flex min-h-11 w-full"
             : nav.length > 0
@@ -115,7 +115,7 @@ export function SiteHeader() {
       >
         <Link
           href="/"
-          className="font-wordmark shrink-0 text-xl font-normal text-[var(--foreground)] transition hover:opacity-70 md:text-2xl"
+          className="font-wordmark shrink-0 cursor-pointer text-xl font-normal text-[var(--foreground)] transition duration-200 ease-out hover:opacity-70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)] md:text-2xl"
         >
           Resonate
         </Link>
@@ -134,7 +134,7 @@ export function SiteHeader() {
                       key={href}
                       href={href}
                       aria-current={active ? "page" : undefined}
-                      className={`text-sm font-normal transition ${
+                      className={`cursor-pointer text-sm font-normal transition duration-200 ease-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)] ${
                         active
                           ? "text-[var(--foreground)]"
                           : "text-[var(--muted)] hover:text-[var(--foreground)]"
@@ -153,7 +153,7 @@ export function SiteHeader() {
               {nav.length > 0 ? (
                 <button
                   type="button"
-                  className="font-sans inline-flex min-h-10 min-w-10 items-center justify-center border border-[var(--border)] bg-[var(--surface)] px-3 text-center text-sm font-normal leading-none text-[var(--foreground)] md:hidden"
+                  className="font-sans inline-flex min-h-10 min-w-10 cursor-pointer items-center justify-center border border-[var(--border)] bg-[var(--surface)] px-3 text-center text-sm font-normal leading-none text-[var(--foreground)] transition duration-200 ease-out hover:bg-[var(--surface-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)] md:hidden"
                   aria-expanded={menuOpen}
                   aria-controls="site-mobile-menu"
                   onClick={() => setMenuOpen((open) => !open)}
@@ -176,7 +176,7 @@ export function SiteHeader() {
               <Link
                 key={href}
                 href={href}
-                className="px-4 py-3 text-base font-normal text-[var(--foreground)] transition hover:bg-[var(--surface-soft)]"
+                className="cursor-pointer px-4 py-3 text-base font-normal text-[var(--foreground)] transition duration-200 ease-out hover:bg-[var(--surface-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]"
                 onClick={() => setMenuOpen(false)}
               >
                 {label}

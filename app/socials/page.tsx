@@ -136,7 +136,7 @@ export default function SocialsPage() {
               type="button"
               onClick={() => void submit(true)}
               disabled={busy}
-              className="font-sans inline-flex min-h-11 w-full items-center justify-center text-center text-base font-normal leading-none text-[var(--muted)] disabled:opacity-40"
+              className="font-sans inline-flex min-h-11 w-full cursor-pointer items-center justify-center text-center text-base font-normal leading-none text-[var(--muted)] transition duration-200 ease-out hover:text-[var(--foreground)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)] disabled:pointer-events-none disabled:opacity-40"
             >
               <span className="btn-label">Skip for now</span>
             </button>

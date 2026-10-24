@@ -479,7 +479,7 @@ export default function MePage() {
             </PrimaryButton>
             <a
               href="/logout"
-              className="font-sans inline-flex min-h-11 w-full items-center justify-center text-center text-base font-normal leading-none text-[var(--muted)]"
+              className="font-sans inline-flex min-h-11 w-full cursor-pointer items-center justify-center text-center text-base font-normal leading-none text-[var(--muted)] transition duration-200 ease-out hover:text-[var(--foreground)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]"
             >
               <span className="btn-label">Sign out</span>
             </a>

@@ -200,7 +200,7 @@ export default function MatchesPage() {
                   <PrimaryButton href="/me">Edit artists</PrimaryButton>
                   <Link
                     href="/crowd"
-                    className="inline-flex min-h-11 items-center justify-center text-base font-semibold text-[var(--foreground)]"
+                    className="inline-flex min-h-11 cursor-pointer items-center justify-center text-base font-semibold text-[var(--foreground)] transition duration-200 ease-out hover:opacity-70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]"
                   >
                     See the crowd
                   </Link>
@@ -217,7 +217,7 @@ export default function MatchesPage() {
                   type="button"
                   onClick={undoSkip}
                   disabled={Boolean(busyId)}
-                  className="font-sans inline-flex min-h-10 shrink-0 items-center justify-center rounded-full px-4 text-center text-sm font-semibold leading-none text-[var(--foreground)] transition hover:bg-[var(--surface-soft)] disabled:opacity-40"
+                  className="font-sans inline-flex min-h-10 shrink-0 cursor-pointer items-center justify-center rounded-full px-4 text-center text-sm font-semibold leading-none text-[var(--foreground)] transition duration-200 ease-out hover:bg-[var(--surface-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)] disabled:pointer-events-none disabled:opacity-40"
                 >
                   <span className="btn-label">Undo</span>
                 </button>

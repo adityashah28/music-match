@@ -28,10 +28,10 @@ export function RsvpControl({
             role="radio"
             aria-checked={selected}
             onClick={() => onChange(option.value)}
-            className={`font-sans inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-full px-2 text-center text-[13px] font-normal leading-none whitespace-nowrap transition-colors duration-200 ${
+            className={`font-sans inline-flex min-h-11 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-full px-2 text-center text-[13px] font-normal leading-none whitespace-nowrap transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)] ${
               selected
-                ? "bg-[var(--foreground)] text-white"
-                : "bg-transparent text-[var(--muted)] hover:text-[var(--foreground)]"
+                ? "bg-[var(--foreground)] text-white hover:bg-neutral-700"
+                : "bg-transparent text-[var(--muted)] hover:bg-[var(--surface-soft)] hover:text-[var(--foreground)]"
             }`}
           >
             <OptionIcon value={option.value} selected={selected} />

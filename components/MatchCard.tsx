@@ -26,7 +26,7 @@ export function MatchCard({
     <GlassCard className="p-0">
       <Link
         href={href}
-        className="block rounded-t-[var(--radius)] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--foreground)]"
+        className="block cursor-pointer rounded-t-[var(--radius)] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--foreground)]"
       >
         <div className="relative h-40 bg-[var(--surface-soft)]">
           {cover ? (

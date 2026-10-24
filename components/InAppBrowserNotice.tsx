@@ -44,7 +44,7 @@ export function InAppBrowserNotice({ className }: Props) {
       <button
         type="button"
         onClick={copyLink}
-        className="font-sans mt-3 inline-flex min-h-10 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface-soft)] px-4 text-center text-sm font-normal leading-none text-[var(--foreground)] transition hover:bg-[var(--border)]"
+        className="font-sans mt-3 inline-flex min-h-10 cursor-pointer items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface-soft)] px-4 text-center text-sm font-normal leading-none text-[var(--foreground)] transition duration-200 ease-out hover:border-[var(--foreground)] hover:bg-[var(--border)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]"
       >
         <span className="btn-label">{copied ? "Link copied" : "Copy link"}</span>
       </button>

@@ -88,7 +88,7 @@ export default function ShowDetailPage() {
       <main className="screen screen-nav flex min-h-dvh flex-col">
         <Link
           href="/shows"
-          className="inline-flex min-h-11 items-center text-sm font-normal text-[var(--muted)] transition hover:text-[var(--foreground)]"
+          className="inline-flex min-h-11 cursor-pointer items-center text-sm font-normal text-[var(--muted)] transition duration-200 ease-out hover:text-[var(--foreground)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]"
         >
           ← All shows
         </Link>

@@ -203,7 +203,7 @@ export default function VerifyPage() {
                     type="button"
                     onClick={resendCode}
                     disabled={resending}
-                    className="text-[var(--muted)] underline decoration-[var(--border)] underline-offset-2 transition hover:text-[var(--foreground)] disabled:opacity-50"
+                    className="cursor-pointer text-[var(--muted)] underline decoration-[var(--border)] underline-offset-2 transition duration-200 ease-out hover:text-[var(--foreground)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)] disabled:opacity-50"
                   >
                     {resending ? "Sending…" : "Resend code"}
                   </button>
