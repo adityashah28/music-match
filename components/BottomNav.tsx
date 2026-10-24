@@ -44,7 +44,7 @@ export function BottomNav() {
               }`}
             >
               <Icon />
-              {label}
+              <span className="btn-label text-[11px]">{label}</span>
             </Link>
           );
         })}

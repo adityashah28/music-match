@@ -111,7 +111,7 @@ export default function ShowDetailPage() {
 
         {!loading && !error && !show ? (
           <GlassCard className="mt-4 p-5">
-            <h1 className="text-[36px] font-semibold leading-[1.02] tracking-tight text-[var(--foreground)]">
+            <h1 className="font-display text-[36px] font-normal leading-[1.02] tracking-tight text-[var(--foreground)]">
               Show missing
             </h1>
             <p className="mt-3 text-base leading-snug text-[var(--muted)]">
@@ -125,7 +125,7 @@ export default function ShowDetailPage() {
 
         {show ? (
           <div className="mt-8">
-            <h1 className="text-[44px] font-semibold leading-[0.98] tracking-tight text-[var(--foreground)]">
+            <h1 className="font-display text-[44px] font-normal leading-[0.98] tracking-tight text-[var(--foreground)]">
               {show.artistName}
             </h1>
             <p className="mt-3 text-base font-normal text-[var(--muted)]">

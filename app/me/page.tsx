@@ -201,7 +201,7 @@ export default function MePage() {
         <p className="text-sm font-normal uppercase tracking-[0.18em] text-[var(--muted)]">
           {handle || "Your profile"}
         </p>
-        <h1 className="mt-2 text-[40px] font-semibold leading-[1.02] tracking-tight text-[var(--foreground)]">
+        <h1 className="mt-2 font-display text-[40px] font-normal leading-[1.02] tracking-tight text-[var(--foreground)]">
           Profile
         </h1>
         <p className="mt-3 text-base font-normal leading-snug text-[var(--muted)]">

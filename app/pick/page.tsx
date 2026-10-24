@@ -106,7 +106,7 @@ export default function PickPage() {
         <div className="grid flex-1 grid-cols-1 gap-8 md:grid-cols-[minmax(17rem,24rem)_minmax(0,1fr)] md:items-start md:gap-10 lg:grid-cols-[minmax(20rem,26rem)_minmax(0,1fr)] lg:gap-14">
           <div className="min-w-0 md:sticky md:top-24 md:self-start">
             <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-2">
-              <h1 className="max-w-[12ch] text-[40px] font-semibold leading-[1.02] tracking-tight text-[var(--foreground)] md:text-5xl">
+              <h1 className="font-display max-w-[12ch] text-[40px] font-normal leading-[1.02] tracking-tight text-[var(--foreground)] md:text-5xl">
                 Pick your artists
               </h1>
               <p className="shrink-0 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm font-normal text-[var(--muted)]">

@@ -36,7 +36,7 @@ export function ArtistChip({
           className="absolute -right-2 -top-2 grid h-11 w-11 place-items-center"
         >
           <span className="grid h-6 w-6 place-items-center rounded-full bg-[var(--foreground)] text-base leading-none text-white">
-            ×
+            <span className="btn-label">×</span>
           </span>
         </button>
       ) : null}

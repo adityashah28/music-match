@@ -57,7 +57,7 @@ export default function FindingPage() {
               </li>
             ))}
           </ul>
-          <h1 className="text-[40px] font-semibold leading-[1.02] tracking-tight text-[var(--foreground)]">
+          <h1 className="font-display text-[40px] font-normal leading-[1.02] tracking-tight text-[var(--foreground)]">
             Finding matches
           </h1>
           <p className="mt-3 max-w-xs text-base font-normal leading-snug text-[var(--muted)]">
