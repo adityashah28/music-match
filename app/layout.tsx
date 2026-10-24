@@ -56,7 +56,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${khula.variable} ${instrumentSerif.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <body className={`${khula.className} min-h-dvh text-[var(--foreground)]`}>
+      <body
+        className={`${khula.className} min-h-dvh text-[var(--foreground)]`}
+        suppressHydrationWarning
+      >
         <div className="relative min-h-dvh w-full">
           <SiteHeader />
           {children}

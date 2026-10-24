@@ -40,3 +40,11 @@ export async function finishGoogle(): Promise<string> {
   if (error || !data.session) throw error ?? new Error("Google sign-in didn't finish");
   return data.session.access_token;
 }
+
+/** Clears any Google/Supabase browser session (no-op when env isn’t configured). */
+export async function signOutGoogle(): Promise<void> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
+  if (!url || !key) return;
+  await supabase().auth.signOut();
+}

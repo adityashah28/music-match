@@ -13,6 +13,8 @@ const HIDDEN = new Set([
   "/pick",
   "/socials",
   "/finding",
+  "/auth/callback",
+  "/logout",
 ]);
 
 const ITEMS = [

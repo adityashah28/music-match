@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import { BackLink } from "@/components/BackLink";
 import { CityAutocomplete, type CityValue } from "@/components/CityAutocomplete";
@@ -9,10 +9,14 @@ import { OnboardingProgress } from "@/components/OnboardingProgress";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { getDraft, getUserId, isVerified, setDraft } from "@/lib/client";
 
+function normalizeUsername(raw: string) {
+  return raw.replace(/^@+/, "").replace(/\s+/g, "");
+}
+
 export default function AboutPage() {
   const router = useRouter();
   const [name, setName] = useState("");
-  const [handle, setHandle] = useState("");
+  const [username, setUsername] = useState("");
   const [city, setCity] = useState<CityValue>({
     city: "",
     label: "",
@@ -29,11 +33,12 @@ export default function AboutPage() {
     }
     const draft = getDraft();
     if (!isVerified(draft)) {
-      router.replace("/phone");
+      // Google is primary; phone OTP remains at /phone for testing.
+      router.replace("/");
       return;
     }
     setName(draft.name);
-    setHandle(draft.handle);
+    setUsername(normalizeUsername(draft.handle));
     setCity({
       city: draft.city,
       label: draft.city,
@@ -45,14 +50,14 @@ export default function AboutPage() {
 
   function continueNext() {
     const nextName = name.trim();
-    const nextHandle = handle.trim().replace(/^@+/, "");
+    const nextUsername = normalizeUsername(username).trim();
     const nextCity = city.city.trim();
     if (!nextName) {
       setError("Add your name.");
       return;
     }
-    if (!nextHandle) {
-      setError("Add a handle so people know who you are.");
+    if (!nextUsername) {
+      setError("Add a username so people know who you are.");
       return;
     }
     if (!nextCity || !city.placeId) {
@@ -63,13 +68,24 @@ export default function AboutPage() {
     setDraft({
       ...draft,
       name: nextName,
-      handle: nextHandle,
+      handle: nextUsername,
       city: nextCity,
       cityLat: city.lat,
       cityLng: city.lng,
       cityPlaceId: city.placeId,
     });
     router.push("/age");
+  }
+
+  function onSubmit(event: FormEvent) {
+    event.preventDefault();
+    continueNext();
+  }
+
+  function onFieldKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    continueNext();
   }
 
   return (
@@ -81,45 +97,53 @@ export default function AboutPage() {
           About you
         </h1>
         <p className="mt-3 text-base font-normal leading-snug text-[var(--muted)]">
-          Name, handle, and city.
+          Name, username, and city.
         </p>
 
-        <label className="mt-8 block text-sm font-normal text-[var(--muted)]" htmlFor="name">
-          Name
-        </label>
-        <div className="field mt-2 flex min-h-12 w-full items-center px-4">
-          <input
-            id="name"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            placeholder="Maya"
-            autoComplete="name"
-            className="text-base font-normal placeholder:text-[var(--muted)]"
-          />
-        </div>
+        <form className="flex min-h-0 flex-1 flex-col" onSubmit={onSubmit}>
+          <label className="mt-8 block text-sm font-normal text-[var(--muted)]" htmlFor="name">
+            Name
+          </label>
+          <div className="field mt-2 flex min-h-12 w-full items-center px-4">
+            <input
+              id="name"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              onKeyDown={onFieldKeyDown}
+              placeholder="Maya"
+              autoComplete="name"
+              className="text-base font-normal placeholder:text-[var(--muted)]"
+            />
+          </div>
 
-        <label className="mt-5 block text-sm font-normal text-[var(--muted)]" htmlFor="handle">
-          Handle
-        </label>
-        <div className="field mt-2 flex min-h-12 w-full items-center px-4">
-          <input
-            id="handle"
-            value={handle}
-            onChange={(event) => setHandle(event.target.value)}
-            placeholder="maya"
-            autoCapitalize="none"
-            autoComplete="nickname"
-            className="text-base font-normal placeholder:text-[var(--muted)]"
-          />
-        </div>
+          <label className="mt-5 block text-sm font-normal text-[var(--muted)]" htmlFor="username">
+            Username
+          </label>
+          <div className="field mt-2 flex min-h-12 w-full items-center pl-5 pr-4">
+            <span className="field-prefix text-base font-normal text-[var(--muted)]" aria-hidden="true">
+              {"@"}
+            </span>
+            <input
+              id="username"
+              value={username}
+              onChange={(event) => setUsername(normalizeUsername(event.target.value))}
+              onKeyDown={onFieldKeyDown}
+              placeholder="maya"
+              autoCapitalize="none"
+              autoComplete="username"
+              spellCheck={false}
+              className="min-w-0 flex-1 w-auto text-base font-normal placeholder:text-[var(--muted)]"
+            />
+          </div>
 
-        <CityAutocomplete value={city} onChange={setCity} />
+          <CityAutocomplete value={city} onChange={setCity} />
 
-        {error ? <p className="mt-4 text-sm font-normal text-[var(--muted)]">{error}</p> : null}
+          {error ? <p className="mt-4 text-sm font-normal text-[var(--muted)]">{error}</p> : null}
 
-        <div className="sticky bottom-0 z-20 mt-auto pt-8">
-          <PrimaryButton onClick={continueNext}>Continue</PrimaryButton>
-        </div>
+          <div className="sticky bottom-0 z-20 mt-auto pt-8">
+            <PrimaryButton type="submit">Continue</PrimaryButton>
+          </div>
+        </form>
       </main>
     </GradientBackground>
   );

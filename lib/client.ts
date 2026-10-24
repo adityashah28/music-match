@@ -301,14 +301,15 @@ export function clearDraft() {
   sessionStorage.removeItem(DRAFT_KEY);
 }
 
-/** Next unfinished onboarding step for a guest draft. */
 /** Has this draft proven who it is, by Google sign-in or by an SMS code? Gate onboarding steps on this. */
 export function isVerified(draft: Draft = getDraft()): boolean {
   return Boolean(draft.authProof) || (draft.phoneVerified && Boolean(draft.phone));
 }
 
+/** Next unfinished onboarding step for a guest draft. */
 export function onboardingHref(draft: Draft = getDraft()): string {
-  if (!isVerified(draft)) return "/phone";
+  // Google is primary; /phone and /verify still work if opened directly.
+  if (!isVerified(draft)) return "/";
   if (!draft.name.trim() || !draft.handle.trim() || !draft.city.trim()) return "/about";
   if (draft.age == null) return "/age";
   if (draft.artists.length < 1) return "/pick";

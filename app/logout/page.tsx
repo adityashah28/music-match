@@ -2,23 +2,38 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { clearDraft } from "@/lib/client";
+import { clearDraft, clearUser } from "@/lib/client";
 
-const USER_KEY = "resonate_user_id";
-
-/** Clears saved login and sends you to phone signup/login. */
+/** Clears saved login (and any Supabase session) and sends you home. */
 export default function LogoutPage() {
   const router = useRouter();
 
   useEffect(() => {
-    try {
-      localStorage.removeItem(USER_KEY);
-      clearDraft();
-      sessionStorage.removeItem("resonate_dev_otp");
-    } catch {
-      /* ignore */
+    let cancelled = false;
+
+    async function logout() {
+      try {
+        clearUser();
+        clearDraft();
+        sessionStorage.removeItem("resonate_dev_otp");
+      } catch {
+        /* ignore */
+      }
+
+      try {
+        const { signOutGoogle } = await import("@/lib/supabase-browser");
+        await signOutGoogle();
+      } catch {
+        /* ignore missing env / already signed out */
+      }
+
+      if (!cancelled) router.replace("/");
     }
-    router.replace("/phone");
+
+    void logout();
+    return () => {
+      cancelled = true;
+    };
   }, [router]);
 
   return (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { BackLink } from "@/components/BackLink";
 import { GradientBackground } from "@/components/GradientBackground";
@@ -35,7 +35,7 @@ export default function SocialsPage() {
     }
     const draft = getDraft();
     if (!isVerified(draft)) {
-      router.replace("/phone");
+      router.replace("/");
       return;
     }
     if (draft.artists.length < 1) {
@@ -51,8 +51,8 @@ export default function SocialsPage() {
     if (busy) return;
     const draft = getDraft();
     if (!isVerified(draft)) {
-      setError("Verify your phone first.");
-      router.push("/phone");
+      setError("Sign in first.");
+      router.push("/");
       return;
     }
     if (!draft.name.trim() || !draft.handle.trim() || !draft.city.trim()) {
@@ -115,25 +115,33 @@ export default function SocialsPage() {
           Optional. Shared only after you both tap interested.
         </p>
 
-        <SocialField id="instagram" label="Instagram" value={instagram} onChange={setInstagram} />
-        <SocialField id="tiktok" label="TikTok" value={tiktok} onChange={setTiktok} />
-        <SocialField id="snapchat" label="Snapchat" value={snapchat} onChange={setSnapchat} />
+        <form
+          className="flex min-h-0 flex-1 flex-col"
+          onSubmit={(event: FormEvent) => {
+            event.preventDefault();
+            void submit(false);
+          }}
+        >
+          <SocialField id="instagram" label="Instagram" value={instagram} onChange={setInstagram} />
+          <SocialField id="tiktok" label="TikTok" value={tiktok} onChange={setTiktok} />
+          <SocialField id="snapchat" label="Snapchat" value={snapchat} onChange={setSnapchat} />
 
-        {error ? <p className="mt-4 text-sm font-normal text-[var(--muted)]">{error}</p> : null}
+          {error ? <p className="mt-4 text-sm font-normal text-[var(--muted)]">{error}</p> : null}
 
-        <div className="sticky bottom-0 z-20 mt-auto flex flex-col gap-2 pt-8">
-          <PrimaryButton onClick={() => submit(false)} disabled={busy}>
-            {busy ? "Creating…" : "Create profile"}
-          </PrimaryButton>
-          <button
-            type="button"
-            onClick={() => submit(true)}
-            disabled={busy}
-            className="font-sans inline-flex min-h-11 w-full items-center justify-center text-center text-base font-normal leading-none text-[var(--muted)] disabled:opacity-40"
-          >
-            <span className="btn-label">Skip for now</span>
-          </button>
-        </div>
+          <div className="sticky bottom-0 z-20 mt-auto flex flex-col gap-2 pt-8">
+            <PrimaryButton type="submit" disabled={busy}>
+              {busy ? "Creating…" : "Create profile"}
+            </PrimaryButton>
+            <button
+              type="button"
+              onClick={() => void submit(true)}
+              disabled={busy}
+              className="font-sans inline-flex min-h-11 w-full items-center justify-center text-center text-base font-normal leading-none text-[var(--muted)] disabled:opacity-40"
+            >
+              <span className="btn-label">Skip for now</span>
+            </button>
+          </div>
+        </form>
       </main>
     </GradientBackground>
   );

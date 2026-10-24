@@ -46,7 +46,8 @@ export async function searchCities(query: string): Promise<CitySuggestion[]> {
 
   const response = await fetch(url.toString(), {
     headers: { Accept: "application/json" },
-    next: { revalidate: 0 },
+    cache: "no-store",
+    signal: AbortSignal.timeout(8000),
   });
   if (!response.ok) throw new Error("City search failed");
 

@@ -2,13 +2,22 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { AgeNumberInput } from "@/components/AgeNumberInput";
+import { MatchOffsetControl } from "@/components/MatchOffsetControl";
 import { ArtistChip, ArtistResult } from "@/components/ArtistChip";
 import { GlassCard } from "@/components/GlassCard";
 import { GradientBackground } from "@/components/GradientBackground";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { Skeleton } from "@/components/Skeleton";
 import { CityAutocomplete, type CityValue } from "@/components/CityAutocomplete";
-import { AGE_MAX, AGE_MIN, clampAge } from "@/lib/age";
+import {
+  clampAge,
+  clampOlderOffset,
+  clampYoungerOffset,
+  defaultMatchOffsets,
+  matchRangeFromOffsets,
+  offsetsFromMatchRange,
+} from "@/lib/age";
 import {
   artistKey,
   fetchJson,
@@ -35,9 +44,10 @@ export default function MePage() {
     lng: null,
     placeId: null,
   });
+  const initialOffsets = defaultMatchOffsets(24);
   const [age, setAge] = useState(24);
-  const [ageMin, setAgeMin] = useState(AGE_MIN);
-  const [ageMax, setAgeMax] = useState(AGE_MAX);
+  const [younger, setYounger] = useState(initialOffsets.younger);
+  const [older, setOlder] = useState(initialOffsets.older);
   const [instagram, setInstagram] = useState("");
   const [tiktok, setTiktok] = useState("");
   const [snapchat, setSnapchat] = useState("");
@@ -84,9 +94,11 @@ export default function MePage() {
           lng: profile.cityLng,
           placeId: profile.cityPlaceId,
         });
-        if (profile.age != null) setAge(profile.age);
-        if (profile.ageMin != null) setAgeMin(profile.ageMin);
-        if (profile.ageMax != null) setAgeMax(profile.ageMax);
+        const nextAge = profile.age != null ? clampAge(profile.age) : 24;
+        const offsets = offsetsFromMatchRange(nextAge, profile.ageMin, profile.ageMax);
+        setAge(nextAge);
+        setYounger(offsets.younger);
+        setOlder(offsets.older);
         setInstagram(profile.socials.instagram);
         setTiktok(profile.socials.tiktok);
         setSnapchat(profile.socials.snapchat);
@@ -176,7 +188,7 @@ export default function MePage() {
       return;
     }
     if (!nextHandle) {
-      setSaveError("Add a handle so people know who you are.");
+      setSaveError("Add a username so people know who you are.");
       setSaved(false);
       return;
     }
@@ -185,7 +197,8 @@ export default function MePage() {
       setSaved(false);
       return;
     }
-    if (ageMin > ageMax) {
+    const range = matchRangeFromOffsets(age, younger, older);
+    if (range.min > range.max) {
       setSaveError("Age range is backwards.");
       setSaved(false);
       return;
@@ -203,8 +216,8 @@ export default function MePage() {
       cityLng: city.lng,
       cityPlaceId: city.placeId,
       age: clampAge(age),
-      ageMin: clampAge(ageMin),
-      ageMax: clampAge(ageMax),
+      ageMin: range.min,
+      ageMax: range.max,
       instagram: instagram.trim(),
       tiktok: tiktok.trim(),
       snapchat: snapchat.trim(),
@@ -228,9 +241,13 @@ export default function MePage() {
           lng: profile.cityLng,
           placeId: profile.cityPlaceId,
         });
-        if (profile.age != null) setAge(profile.age);
-        if (profile.ageMin != null) setAgeMin(profile.ageMin);
-        if (profile.ageMax != null) setAgeMax(profile.ageMax);
+        if (profile.age != null) {
+          const nextAge = clampAge(profile.age);
+          const offsets = offsetsFromMatchRange(nextAge, profile.ageMin, profile.ageMax);
+          setAge(nextAge);
+          setYounger(offsets.younger);
+          setOlder(offsets.older);
+        }
         setInstagram(profile.socials.instagram);
         setTiktok(profile.socials.tiktok);
         setSnapchat(profile.socials.snapchat);
@@ -254,7 +271,7 @@ export default function MePage() {
           Profile
         </h1>
         <p className="mt-3 text-base font-normal leading-snug text-[var(--muted)]">
-          Name, handle, city, age, socials, and artists.
+          Name, username, city, age, socials, and artists.
         </p>
 
         {loading ? (
@@ -287,79 +304,68 @@ export default function MePage() {
                 autoComplete="name"
                 capitalize
               />
-              <Field
-                id="handle"
-                label="Handle"
-                value={handle}
-                onChange={edit(setHandle)}
-                placeholder="maya"
-                autoComplete="nickname"
-              />
+              <div>
+                <label className="block text-sm font-normal text-[var(--muted)]" htmlFor="handle">
+                  Username
+                </label>
+                <div className="field mt-2 flex min-h-12 w-full items-center pl-5 pr-4">
+                  <span className="field-prefix text-base font-normal text-[var(--muted)]" aria-hidden="true">
+                    {"@"}
+                  </span>
+                  <input
+                    id="handle"
+                    value={handle}
+                    onChange={(event) => {
+                      setSaved(false);
+                      setHandle(event.target.value.replace(/^@+/, "").replace(/\s+/g, ""));
+                    }}
+                    placeholder="maya"
+                    autoComplete="username"
+                    autoCapitalize="none"
+                    spellCheck={false}
+                    className="min-w-0 flex-1 w-auto text-base font-normal placeholder:text-[var(--muted)]"
+                  />
+                </div>
+              </div>
               <CityAutocomplete
+                className="mt-0"
                 value={city}
                 onChange={(next) => {
                   setSaved(false);
                   setCity(next);
                 }}
               />
-              <div>
+              <section>
                 <label className="block text-sm font-normal text-[var(--muted)]" htmlFor="age">
                   Your age
                 </label>
-                <div className="field mt-2 flex min-h-12 w-full items-center px-4">
-                  <input
+                <div className="mt-3 flex justify-center">
+                  <AgeNumberInput
                     id="age"
-                    type="number"
-                    min={AGE_MIN}
-                    max={AGE_MAX}
                     value={age}
-                    onChange={(event) => {
+                    onChange={(next) => {
                       setSaved(false);
-                      setAge(clampAge(Number(event.target.value) || AGE_MIN));
+                      setAge(next);
+                      setYounger((y) => clampYoungerOffset(next, y));
+                      setOlder((o) => clampOlderOffset(next, o));
                     }}
-                    className="text-base font-normal"
                   />
                 </div>
-              </div>
-              <div>
-                <p className="text-sm font-normal text-[var(--muted)]">
-                  Show me ages {ageMin}–{ageMax}
-                </p>
-                <label className="mt-3 block text-sm font-normal text-[var(--muted)]" htmlFor="age-min">
-                  Youngest
-                </label>
-                <input
-                  id="age-min"
-                  type="range"
-                  min={AGE_MIN}
-                  max={AGE_MAX}
-                  value={ageMin}
-                  onChange={(event) => {
+              </section>
+              <section>
+                <p className="text-sm font-normal text-[var(--muted)]">Match me with</p>
+                <MatchOffsetControl
+                  className="mt-3"
+                  age={age}
+                  younger={younger}
+                  older={older}
+                  onChange={({ younger: y, older: o }) => {
                     setSaved(false);
-                    const next = clampAge(Number(event.target.value));
-                    setAgeMin(next);
-                    if (next > ageMax) setAgeMax(next);
+                    setYounger(y);
+                    setOlder(o);
                   }}
-                  className="mt-2 w-full accent-[var(--foreground)]"
                 />
-                <label className="mt-3 block text-sm font-normal text-[var(--muted)]" htmlFor="age-max">
-                  Oldest
-                </label>
-                <input
-                  id="age-max"
-                  type="range"
-                  min={AGE_MIN}
-                  max={AGE_MAX}
-                  value={ageMax}
-                  onChange={(event) => {
-                    setSaved(false);
-                    const next = clampAge(Number(event.target.value));
-                    setAgeMax(next);
-                    if (next < ageMin) setAgeMin(next);
-                  }}
-                  className="mt-2 w-full accent-[var(--foreground)]"
-                />
-              </div>
+              </section>
             </GlassCard>
 
             <GlassCard className="flex flex-col gap-5 p-5">
@@ -427,13 +433,17 @@ export default function MePage() {
               {notice ? <p className="mt-3 text-sm text-[var(--muted)]">{notice}</p> : null}
               {searchError ? <p className="mt-3 text-sm text-[var(--muted)]">{searchError}</p> : null}
 
-              <div className="mt-3 flex flex-col gap-2">
-                {searching ? (
-                  <div className="flex flex-col gap-2" aria-busy="true">
+              <div
+                className={`mt-3 flex flex-col gap-2 ${searching && results.length > 0 ? "opacity-70" : ""}`}
+                aria-busy={searching || undefined}
+              >
+                {/* Keep prior hits visible while fetching — never stack skeletons on top. */}
+                {searching && results.length === 0 ? (
+                  <>
                     <span className="sr-only">Searching</span>
                     <Skeleton className="h-11 w-full rounded-full" />
                     <Skeleton className="h-11 w-full rounded-full" />
-                  </div>
+                  </>
                 ) : null}
                 {!searching && query.trim() && results.length === 0 && !searchError ? (
                   <p className="py-3 text-sm text-[var(--muted)]">

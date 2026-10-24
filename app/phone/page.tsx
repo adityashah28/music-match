@@ -15,6 +15,10 @@ import {
   splitE164,
 } from "@/lib/phone";
 
+/**
+ * Phone OTP signup/login — kept for SMS-credit / internal testing.
+ * Not linked from LandingCta or SiteHeader; open /phone directly to use.
+ */
 export default function PhonePage() {
   const router = useRouter();
   const [dialCode, setDialCode] = useState<DialCode>(DEFAULT_DIAL_CODE);

@@ -30,7 +30,7 @@ export default function PickPage() {
   useEffect(() => {
     const draft = getDraft();
     if (!isVerified(draft)) {
-      router.replace("/phone");
+      router.replace("/");
       return;
     }
     if (draft.age == null) {
@@ -121,14 +121,17 @@ export default function PickPage() {
               <h1 className="font-display max-w-[12ch] text-[40px] font-normal leading-[1.02] tracking-tight text-[var(--foreground)] md:text-5xl">
                 Pick your artists
               </h1>
-              <p className="shrink-0 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm font-normal text-[var(--muted)]">
-                {artists.length} of 5
+              <p className="pill h-8 shrink-0 border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-normal text-[var(--muted)]">
+                <span className="chip-label">{artists.length} of 5</span>
               </p>
             </div>
             <p className="mt-3 max-w-[40ch] text-base font-normal leading-snug text-[var(--muted)]">
               {artists.length >= 5
                 ? "That's five — remove one to swap."
                 : "At least one. Up to five."}
+            </p>
+            <p className="mt-1 max-w-[40ch] text-sm font-normal italic leading-snug text-[var(--muted)]">
+              You can add more later.
             </p>
 
             {artists.length > 0 ? (
@@ -171,25 +174,6 @@ export default function PickPage() {
           </div>
 
           <div className="min-w-0 pb-4">
-            {searching ? (
-              <div
-                className="grid grid-cols-1 gap-2 sm:grid-cols-2"
-                aria-busy="true"
-              >
-                <span className="sr-only">Searching</span>
-                <Skeleton className="h-14 w-full" />
-                <Skeleton className="h-14 w-full" />
-                <Skeleton className="h-14 w-full" />
-                <Skeleton className="h-14 w-full" />
-              </div>
-            ) : null}
-
-            {!searching && searchingQuery && results.length === 0 && !searchError ? (
-              <p className="py-3 text-sm font-normal text-[var(--muted)]">
-                No artists under that name. Try another spelling.
-              </p>
-            ) : null}
-
             {!searchingQuery ? (
               <>
                 <p className="pb-3 text-sm font-normal text-[var(--muted)]">Suggested</p>
@@ -217,7 +201,25 @@ export default function PickPage() {
                 </div>
               </>
             ) : (
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <div
+                className={`grid grid-cols-1 gap-2 sm:grid-cols-2 ${searching && results.length > 0 ? "opacity-70" : ""}`}
+                aria-busy={searching || undefined}
+              >
+                {/* Keep prior hits visible while fetching — never stack skeletons on top. */}
+                {searching && results.length === 0 ? (
+                  <>
+                    <span className="sr-only">Searching</span>
+                    <Skeleton className="h-14 w-full" />
+                    <Skeleton className="h-14 w-full" />
+                    <Skeleton className="h-14 w-full" />
+                    <Skeleton className="h-14 w-full" />
+                  </>
+                ) : null}
+                {!searching && results.length === 0 && !searchError ? (
+                  <p className="col-span-full py-3 text-sm font-normal text-[var(--muted)]">
+                    No artists under that name. Try another spelling.
+                  </p>
+                ) : null}
                 {results.map((artist) => {
                   const picked = artists.some(
                     (item) => artistKey(item) === artistKey(artist),

@@ -41,8 +41,8 @@ export function MatchCard({
           ) : null}
           <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
           {match.isDemo ? (
-            <span className="absolute right-3 top-3 rounded-full border border-white/40 bg-black/30 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white">
-              demo
+            <span className="pill absolute right-3 top-3 border border-white/40 bg-black/30 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white">
+              <span className="chip-label">demo</span>
             </span>
           ) : null}
           <div className="absolute inset-x-4 bottom-3">

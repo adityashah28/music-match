@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { getDraft, getUserId, isVerified, onboardingHref } from "@/lib/client";
+import { GoogleSignInButton } from "@/components/GoogleSignInButton";
+import { clearDraft, getDraft, getUserId, isVerified, onboardingHref } from "@/lib/client";
 
 const APP_NAV = [
   { href: "/matches", label: "Matches" },
@@ -12,14 +13,27 @@ const APP_NAV = [
   { href: "/me", label: "Profile" },
 ] as const;
 
+const ONBOARDING_PATHS = new Set([
+  "/phone",
+  "/verify",
+  "/about",
+  "/age",
+  "/pick",
+  "/socials",
+  "/finding",
+  "/auth/callback",
+]);
+
+type HeaderCta =
+  | { kind: "link"; href: string; label: string }
+  | { kind: "google" }
+  | null;
+
 export function SiteHeader() {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const [hasUserId, setHasUserId] = useState(false);
-  const [cta, setCta] = useState<{ href: string; label: string }>({
-    href: "/phone",
-    label: "Get started",
-  });
+  const [cta, setCta] = useState<HeaderCta>({ kind: "google" });
 
   useEffect(() => {
     setMenuOpen(false);
@@ -30,20 +44,66 @@ export function SiteHeader() {
     setHasUserId(Boolean(userId));
 
     if (userId) {
-      setCta({ href: "/matches", label: "Continue" });
+      setCta({ kind: "link", href: "/matches", label: "Continue" });
+      return;
+    }
+
+    // Already mid-flow — no header CTA needed.
+    if (ONBOARDING_PATHS.has(pathname)) {
+      setCta(null);
+      return;
+    }
+
+    // Backing out to home abandons guest onboarding; Google starts over.
+    if (pathname === "/") {
+      clearDraft();
+      sessionStorage.removeItem("resonate_dev_otp");
+      setCta({ kind: "google" });
       return;
     }
 
     const draft = getDraft();
+    // Verified mid-draft (Google or SMS) can still resume.
     if (isVerified(draft)) {
-      setCta({ href: onboardingHref(draft), label: "Continue" });
+      setCta({ kind: "link", href: onboardingHref(draft), label: "Continue" });
       return;
     }
-    setCta({ href: "/phone", label: "Get started" });
+    setCta({ kind: "google" });
   }, [pathname]);
 
   const nav = hasUserId ? [...APP_NAV] : [];
   const isLanding = pathname === "/";
+  const isOnboarding = ONBOARDING_PATHS.has(pathname);
+
+  function renderCta(opts: { mobile?: boolean }) {
+    if (!cta) return null;
+
+    if (cta.kind === "google") {
+      return (
+        <GoogleSignInButton
+          variant="header"
+          className={opts.mobile ? "mt-1 w-full" : nav.length > 0 ? "hidden md:inline-flex" : ""}
+          noticeOnlyInApp={false}
+        />
+      );
+    }
+
+    return (
+      <Link
+        href={cta.href}
+        className={`font-sans min-h-10 items-center justify-center rounded-full bg-[var(--foreground)] px-4 text-center text-sm font-normal leading-none text-white transition hover:bg-neutral-800 ${
+          opts.mobile
+            ? "mt-1 inline-flex min-h-11 w-full"
+            : nav.length > 0
+              ? "hidden md:inline-flex"
+              : "inline-flex"
+        }`}
+        onClick={opts.mobile ? () => setMenuOpen(false) : undefined}
+      >
+        <span className="btn-label">{cta.label}</span>
+      </Link>
+    );
+  }
 
   return (
     <header className="site-header pointer-events-none fixed inset-x-0 top-0 z-50">
@@ -60,7 +120,7 @@ export function SiteHeader() {
           Resonate
         </Link>
 
-        {isLanding ? null : (
+        {isLanding || isOnboarding ? null : (
           <>
             {nav.length > 0 ? (
               <nav aria-label="Site" className="hidden items-center gap-6 md:flex">
@@ -88,14 +148,7 @@ export function SiteHeader() {
             ) : null}
 
             <div className="flex items-center gap-2">
-              <Link
-                href={cta.href}
-                className={`font-sans min-h-10 items-center justify-center rounded-full bg-[var(--foreground)] px-4 text-center text-sm font-normal leading-none text-white transition hover:bg-neutral-800 ${
-                  nav.length > 0 ? "hidden md:inline-flex" : "inline-flex"
-                }`}
-              >
-                <span className="btn-label">{cta.label}</span>
-              </Link>
+              {renderCta({})}
 
               {nav.length > 0 ? (
                 <button
@@ -113,7 +166,7 @@ export function SiteHeader() {
         )}
       </div>
 
-      {!isLanding && menuOpen && nav.length > 0 ? (
+      {!isLanding && !isOnboarding && menuOpen && nav.length > 0 ? (
         <div
           id="site-mobile-menu"
           className="pointer-events-auto mx-4 mb-3 border border-[var(--border)] bg-[var(--surface)] p-3 md:hidden"
@@ -129,13 +182,7 @@ export function SiteHeader() {
                 {label}
               </Link>
             ))}
-            <Link
-              href={cta.href}
-              className="font-sans mt-1 inline-flex min-h-11 items-center justify-center rounded-full bg-[var(--foreground)] px-4 text-center text-sm font-normal leading-none text-white"
-              onClick={() => setMenuOpen(false)}
-            >
-              <span className="btn-label">{cta.label}</span>
-            </Link>
+            {renderCta({ mobile: true })}
           </nav>
         </div>
       ) : null}

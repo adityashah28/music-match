@@ -79,7 +79,7 @@ export function ArtistResult({
           {name.slice(0, 1).toUpperCase()}
         </span>
       )}
-      <span className="min-w-0 flex-1 truncate text-base font-normal text-[var(--foreground)]">
+      <span className="chip-label min-w-0 flex-1 truncate text-base font-normal text-[var(--foreground)]">
         {name}
         {picked ? <span className="text-[var(--muted)]"> · Added</span> : null}
       </span>

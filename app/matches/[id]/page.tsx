@@ -207,8 +207,8 @@ export default function MatchDetailPage() {
                   {match.name || match.handle}
                 </h1>
                 {match.isDemo ? (
-                  <span className="mt-2 shrink-0 rounded-full border border-[var(--border)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-                    demo
+                  <span className="pill mt-2 shrink-0 border border-[var(--border)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+                    <span className="chip-label">demo</span>
                   </span>
                 ) : null}
               </div>
@@ -224,8 +224,8 @@ export default function MatchDetailPage() {
                 <p className="text-lg font-semibold leading-snug text-[var(--foreground)]">
                   {sharedCount(match.sharedArtists.length)}
                 </p>
-                <span className="inline-flex shrink-0 rounded-full bg-[var(--foreground)] px-2.5 py-1 text-xs font-normal text-white">
-                  {match.label}
+                <span className="pill shrink-0 bg-[var(--foreground)] px-2.5 py-1 text-xs font-normal text-white">
+                  <span className="chip-label">{match.label}</span>
                 </span>
               </div>
               {match.sharedArtists.length > 0 ? (
@@ -268,9 +268,9 @@ export default function MatchDetailPage() {
                       {["Instagram", "TikTok", "Snapchat"].map((label) => (
                         <li
                           key={label}
-                          className="rounded-full border border-dashed border-[var(--border)] px-3.5 py-2 text-sm font-normal text-[var(--muted)]"
+                          className="pill border border-dashed border-[var(--border)] px-3.5 py-2 text-sm font-normal text-[var(--muted)]"
                         >
-                          {label} · demo
+                          <span className="chip-label">{label} · demo</span>
                         </li>
                       ))}
                     </ul>

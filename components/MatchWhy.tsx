@@ -69,8 +69,8 @@ export function MatchWhy({
         <p className="min-w-0 flex-1 text-sm font-semibold leading-tight text-[var(--foreground)]">
           {sharedCount(sharedArtists.length)}
         </p>
-        <span className="shrink-0 rounded-full bg-[var(--foreground)] px-2.5 py-1 text-xs font-normal text-white">
-          {label}
+        <span className="pill shrink-0 bg-[var(--foreground)] px-2.5 py-1 text-xs font-normal text-white">
+          <span className="chip-label">{label}</span>
         </span>
       </div>
       <p className="mt-2 truncate text-sm font-normal text-[var(--muted)]">

@@ -18,8 +18,19 @@
   --content-max: 42rem;
   --content-wide: 64rem;
   --content-hero: 72rem;
-  /* 0.2em sank labels; ~0.08em centers Khula ink in pills */
-  --btn-label-nudge: 0.08em;
+  /*
+   * Khula has a large font-bounding descent but almost no real glyph
+   * descent, so caps sit above the geometric mid of the line box.
+   * Chip/badge copy next to avatars needs a stronger drop than CTA
+   * buttons (which use leading-none in a tight pill).
+   * Do not “fix” missing labels with container padding-top.
+   */
+  /*
+   * Before: 0.25em (sat low). Avatars are not translated — only labels.
+   * Final: 0.1em chip / 0.06em btn (Khula ink ~on mid at /pick).
+   */
+  --chip-label-nudge: 0.1em;
+  --btn-label-nudge: 0.06em;
 }
 
 @theme inline {
@@ -66,21 +77,37 @@ h3 {
   letter-spacing: -0.02em;
 }
 
-/* Optical label nudge for Khula in pills (PrimaryButton, SiteHeader, chips). */
+/*
+ * PILL / CHIP LABEL OPTICS (nudge-v3)
+ * -----------------------
+ * Khula’s glyphs sit high in the em-box. Nudge the text node only —
+ * never pad/translate the avatar row (avatars stay flex-centered).
+ * Final dial: --chip-label-nudge 0.1em (was 0.25em, sat low).
+ */
+.chip-label,
 .btn-label {
   display: inline-block;
   line-height: 1;
+}
+
+.chip-label {
+  transform: translateY(var(--chip-label-nudge));
+}
+
+.btn-label {
   transform: translateY(var(--btn-label-nudge));
 }
 
-/* Same 0.08em drop when a centered control forgot .btn-label.
-   Flex centering only uses half of the extra top padding.
-   :has(.btn-label) keeps existing pills from shifting twice. */
-:is(button, a).items-center.justify-center:not(:has(.btn-label)) {
-  padding-top: calc(var(--btn-label-nudge) * 2);
+/* Compact pill shell — use with a .chip-label child for counters/badges. */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  line-height: 1;
 }
 
-/* Shared text control inside .field — do not share nudge with .btn-label.
+/* Shared text control inside .field — separate nudge from chip labels.
    The descendant rule makes .field-control optional. */
 .field :is(input, select, textarea):not([type="range"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]),
 .field-control {
@@ -93,6 +120,14 @@ h3 {
   transform: translateY(0.2em);
   outline: none;
   color: inherit;
+}
+
+/* Keep @ (etc.) prefix optically aligned with .field input text. */
+.field-prefix {
+  flex-shrink: 0;
+  line-height: 1;
+  transform: translateY(0.2em);
+  user-select: none;
 }
 
 /* Light gallery panel — replaces glass */
