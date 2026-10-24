@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { BackLink } from "@/components/BackLink";
 import { GradientBackground } from "@/components/GradientBackground";
@@ -12,7 +12,6 @@ import {
   fetchJson,
   getDraft,
   getUserId,
-  onboardingHref,
   setDraft,
   setUserId,
 } from "@/lib/client";
@@ -29,6 +28,8 @@ export default function VerifyPage() {
   const [resending, setResending] = useState(false);
   const [error, setError] = useState("");
   const [cooldown, setCooldown] = useState(RESEND_SECONDS);
+  const [alreadyVerified, setAlreadyVerified] = useState(false);
+  const autoSubmittedCode = useRef("");
 
   useEffect(() => {
     if (getUserId()) {
@@ -40,10 +41,8 @@ export default function VerifyPage() {
       router.replace("/phone");
       return;
     }
-    if (draft.phoneVerified) {
-      router.replace(onboardingHref(draft));
-      return;
-    }
+    // Stay on this step when navigating back from About — don't bounce forward.
+    setAlreadyVerified(draft.phoneVerified);
     setPhone(draft.phone);
     const dev = sessionStorage.getItem("resonate_dev_otp");
     if (dev) setHint(`Dev code: ${dev}`);
@@ -55,15 +54,20 @@ export default function VerifyPage() {
     return () => window.clearTimeout(id);
   }, [cooldown]);
 
-  async function continueNext() {
+  async function continueNext(nextCode = code) {
     if (busy) return;
+    if (alreadyVerified) {
+      router.push("/about");
+      return;
+    }
+    if (nextCode.length !== 6 || !phone) return;
     setBusy(true);
     setError("");
     try {
       const data = await fetchJson("/api/auth/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, code }),
+        body: JSON.stringify({ phone, code: nextCode }),
       });
       const row = data && typeof data === "object" ? (data as Record<string, unknown>) : null;
       if (!row?.ok) {
@@ -97,6 +101,16 @@ export default function VerifyPage() {
       setBusy(false);
     }
   }
+
+  // Auto-submit once the 6th digit is entered.
+  useEffect(() => {
+    if (alreadyVerified || busy || !phone || code.length !== 6) return;
+    if (autoSubmittedCode.current === code) return;
+    autoSubmittedCode.current = code;
+    void continueNext(code);
+    // intentionally only react to a completed code
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [code, phone, alreadyVerified, busy]);
 
   async function resendCode() {
     if (resending || cooldown > 0 || !phone) return;
@@ -142,50 +156,70 @@ export default function VerifyPage() {
           Sent to {phone ? formatPhoneDisplay(phone) : "your phone"}.
         </p>
 
-        <p className="mt-8 text-sm font-normal text-[var(--muted)]" id="code-label">
-          6-digit code
-        </p>
-        <div className="mt-2">
-          <OtpInput
-            value={code}
-            onChange={(next) => {
-              setCode(next);
-              if (error) setError("");
-            }}
-            disabled={busy}
-            autoFocus
-            aria-labelledby="code-label"
-            aria-describedby={error ? "code-error" : undefined}
-          />
-        </div>
-
-        <p className="mt-4 text-sm font-normal text-[var(--muted)]">
-          {cooldown > 0 ? (
-            <>Resend in {cooldown}s</>
+        <form
+          className="flex min-h-0 flex-1 flex-col"
+          onSubmit={(event: FormEvent) => {
+            event.preventDefault();
+            void continueNext();
+          }}
+        >
+          {alreadyVerified ? (
+            <p className="mt-8 text-sm font-normal text-[var(--muted)]">
+              This number is already verified. Continue to keep going, or go back to change it.
+            </p>
           ) : (
-            <button
-              type="button"
-              onClick={resendCode}
-              disabled={resending}
-              className="text-[var(--muted)] underline decoration-[var(--border)] underline-offset-2 transition hover:text-[var(--foreground)] disabled:opacity-50"
-            >
-              {resending ? "Sending…" : "Resend code"}
-            </button>
+            <>
+              <p className="mt-8 text-sm font-normal text-[var(--muted)]" id="code-label">
+                6-digit code
+              </p>
+              <div className="mt-2">
+                <OtpInput
+                  value={code}
+                  onChange={(next) => {
+                    setCode(next);
+                    if (next.length < 6) autoSubmittedCode.current = "";
+                    if (error) setError("");
+                  }}
+                  disabled={busy}
+                  autoFocus
+                  aria-labelledby="code-label"
+                  aria-describedby={error ? "code-error" : undefined}
+                />
+              </div>
+
+              <p className="mt-4 text-sm font-normal text-[var(--muted)]">
+                {cooldown > 0 ? (
+                  <>Resend in {cooldown}s</>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={resendCode}
+                    disabled={resending}
+                    className="text-[var(--muted)] underline decoration-[var(--border)] underline-offset-2 transition hover:text-[var(--foreground)] disabled:opacity-50"
+                  >
+                    {resending ? "Sending…" : "Resend code"}
+                  </button>
+                )}
+              </p>
+
+              {hint ? <p className="mt-3 text-sm font-normal text-[var(--muted)]">{hint}</p> : null}
+              {error ? (
+                <p id="code-error" className="mt-3 text-sm font-normal text-red-600" role="alert">
+                  {error}
+                </p>
+              ) : null}
+            </>
           )}
-        </p>
 
-        {hint ? <p className="mt-3 text-sm font-normal text-[var(--muted)]">{hint}</p> : null}
-        {error ? (
-          <p id="code-error" className="mt-3 text-sm font-normal text-[var(--muted)]" role="alert">
-            {error}
-          </p>
-        ) : null}
-
-        <div className="sticky bottom-0 z-20 mt-auto pt-8">
-          <PrimaryButton onClick={continueNext} disabled={busy || code.length !== 6}>
-            {busy ? "Checking…" : "Continue"}
-          </PrimaryButton>
-        </div>
+          <div className="sticky bottom-0 z-20 mt-auto pt-8">
+            <PrimaryButton
+              type="submit"
+              disabled={busy || (!alreadyVerified && code.length !== 6)}
+            >
+              {busy ? "Checking…" : "Continue"}
+            </PrimaryButton>
+          </div>
+        </form>
       </main>
     </GradientBackground>
   );

@@ -332,8 +332,12 @@ export async function fetchJson(input: string, init?: RequestInit): Promise<unkn
   const headers = new Headers(init?.headers);
   if (token && input.startsWith("/api/")) headers.set("Authorization", `Bearer ${token}`);
   const response = await fetch(input, { ...init, headers });
-  // The server doesn't recognize this device's profile: start onboarding again
-  if (response.status === 401 && typeof window !== "undefined") {
+  // Dead session only — never bounce unauthenticated login/OTP flows home on 401.
+  if (
+    response.status === 401 &&
+    typeof window !== "undefined" &&
+    (getUserToken() || getUserId())
+  ) {
     clearUser();
     window.location.href = "/";
   }

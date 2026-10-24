@@ -21,7 +21,8 @@ export async function POST(request: Request) {
 
     const code = typeof json.code === "string" ? json.code.trim() : "";
     const ok = await verifyOtp(phone, code);
-    if (!ok) throw new StoreError(401, "That code didn’t work. Try again.");
+    // 400 (not 401): fetchJson treats 401 as a dead session and redirects home.
+    if (!ok) throw new StoreError(400, "That code didn’t work. Try again.");
 
     const existing = await findUserByPhone(phone);
     return Response.json({
