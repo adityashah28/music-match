@@ -3,32 +3,34 @@
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { PrimaryButton } from "@/components/PrimaryButton";
-import { getDraft, getUserId } from "@/lib/client";
+import { getDraft, getUserId, onboardingHref } from "@/lib/client";
 
 /**
- * Same destination rules as SiteHeader:
- * guest → Get started /pick, signed-in → Continue /matches,
- * mid-draft → Continue /pick.
+ * Phone OTP is both signup and login — one primary CTA to /phone
+ * (or clear an old session first). Mid-draft resumes onboarding.
  */
 export function LandingCta() {
   const pathname = usePathname();
-  const [cta, setCta] = useState({ href: "/pick", label: "Get started" });
+  const [phoneHref, setPhoneHref] = useState("/phone");
+  const [resumeHref, setResumeHref] = useState<string | null>(null);
 
   useEffect(() => {
     const userId = getUserId();
-    if (userId) {
-      setCta({ href: "/matches", label: "Continue" });
-      return;
-    }
-
     const draft = getDraft();
-    if (draft.artists.length > 0 || draft.handle.trim()) {
-      setCta({ href: "/pick", label: "Continue" });
+
+    // Old localStorage session would skip the phone screen — clear it first.
+    setPhoneHref(userId ? "/logout" : "/phone");
+
+    if (!userId && draft.phoneVerified) {
+      setResumeHref(onboardingHref(draft));
       return;
     }
-
-    setCta({ href: "/pick", label: "Get started" });
+    setResumeHref(null);
   }, [pathname]);
 
-  return <PrimaryButton href={cta.href}>{cta.label}</PrimaryButton>;
+  if (resumeHref) {
+    return <PrimaryButton href={resumeHref}>Continue</PrimaryButton>;
+  }
+
+  return <PrimaryButton href={phoneHref}>Get started</PrimaryButton>;
 }

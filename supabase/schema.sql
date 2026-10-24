@@ -5,8 +5,16 @@ create extension if not exists pgcrypto;
 
 create table if not exists users (
   id uuid primary key default gen_random_uuid(),
+  name text,
   handle text,
+  phone text,
   city text,
+  city_lat double precision,
+  city_lng double precision,
+  city_place_id text,
+  age integer,
+  age_min integer,
+  age_max integer,
   instagram text,
   tiktok text,
   snapchat text,
@@ -14,8 +22,16 @@ create table if not exists users (
   created_at timestamptz not null default now(),
   -- Secret the browser keeps after signup and sends as "Authorization: Bearer <token>".
   -- Proves a request really comes from this user. Never returned by any route except signup.
-  token uuid unique default gen_random_uuid()
+  token uuid unique default gen_random_uuid(),
+  check (age is null or (age >= 18 and age <= 99)),
+  check (
+    age_min is null
+    or age_max is null
+    or (age_min >= 18 and age_max <= 99 and age_min <= age_max)
+  )
 );
+
+create unique index if not exists users_phone_key on users (phone) where phone is not null;
 
 create table if not exists artists (
   id uuid primary key default gen_random_uuid(),
@@ -109,6 +125,14 @@ create table if not exists search_cache (
   created_at timestamptz not null default now()
 );
 
+create table if not exists phone_otps (
+  phone text primary key,
+  code_hash text not null,
+  expires_at timestamptz not null,
+  attempts integer not null default 0,
+  created_at timestamptz not null default now()
+);
+
 comment on table users is
   'Social columns are returned only by the route for that user id, or when match_interest exists in both directions. Demo profiles get a placeholder instead of a link.';
 
@@ -125,7 +149,8 @@ begin
     'show_rsvps',
     'match_interest',
     'match_skip',
-    'search_cache'
+    'search_cache',
+    'phone_otps'
   ]
   loop
     execute format('alter table public.%I enable row level security', tbl);

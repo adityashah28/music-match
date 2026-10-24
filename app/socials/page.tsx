@@ -4,12 +4,14 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BackLink } from "@/components/BackLink";
 import { GradientBackground } from "@/components/GradientBackground";
+import { OnboardingProgress } from "@/components/OnboardingProgress";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import {
   createdUserId,
   createdUserToken,
   fetchJson,
   getDraft,
+  getUserId,
   setDraft,
   setUserId,
   setUserToken,
@@ -26,18 +28,40 @@ export default function SocialsPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    if (getUserId()) {
+      router.replace("/matches");
+      return;
+    }
     const draft = getDraft();
+    if (!draft.phoneVerified) {
+      router.replace("/phone");
+      return;
+    }
+    if (draft.artists.length < 1) {
+      router.replace("/pick");
+      return;
+    }
     setInstagram(draft.instagram);
     setTiktok(draft.tiktok);
     setSnapchat(draft.snapchat);
-  }, []);
+  }, [router]);
 
   async function submit(skip: boolean) {
     if (busy) return;
     const draft = getDraft();
-    if (!draft.handle.trim()) {
-      setError("Add a handle first.");
+    if (!draft.phoneVerified || !draft.phone.trim()) {
+      setError("Verify your phone first.");
+      router.push("/phone");
+      return;
+    }
+    if (!draft.name.trim() || !draft.handle.trim() || !draft.city.trim()) {
+      setError("Add your name, handle, and city first.");
       router.push("/about");
+      return;
+    }
+    if (draft.age == null) {
+      setError("Add your age first.");
+      router.push("/age");
       return;
     }
     if (draft.artists.length < 1) {
@@ -81,7 +105,8 @@ export default function SocialsPage() {
   return (
     <GradientBackground>
       <main className="screen screen-end flex min-h-dvh flex-col">
-        <BackLink href="/about" />
+        <BackLink href="/pick" />
+        <OnboardingProgress step="socials" />
         <h1 className="font-display text-[40px] font-normal leading-[1.02] tracking-tight text-[var(--foreground)]">
           Socials
         </h1>
@@ -97,7 +122,7 @@ export default function SocialsPage() {
 
         <div className="sticky bottom-0 z-20 mt-auto flex flex-col gap-2 pt-8">
           <PrimaryButton onClick={() => submit(false)} disabled={busy}>
-            {busy ? "Saving…" : "Continue"}
+            {busy ? "Creating…" : "Create profile"}
           </PrimaryButton>
           <button
             type="button"
@@ -129,15 +154,17 @@ function SocialField({
       <label className="mt-5 block text-sm font-normal text-[var(--muted)]" htmlFor={id}>
         {label}
       </label>
-      <input
-        id={id}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder="@you"
-        autoCapitalize="none"
-        autoCorrect="off"
-        className="field mt-2 min-h-12 w-full px-4 text-base font-normal outline-none placeholder:text-[var(--muted)]"
-      />
+      <div className="field mt-2 flex min-h-12 w-full items-center px-4">
+        <input
+          id={id}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder="@you"
+          autoCapitalize="none"
+          autoCorrect="off"
+          className="text-base font-normal placeholder:text-[var(--muted)]"
+        />
+      </div>
     </>
   );
 }

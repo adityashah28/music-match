@@ -1,4 +1,4 @@
-import { errorResponse, readJson } from "@/lib/errors";
+import { errorResponse, readJson, StoreError } from "@/lib/errors";
 import { createUser } from "@/lib/store";
 import type { ArtistInput, CreateUserBody } from "@/lib/types";
 
@@ -14,6 +14,19 @@ function optionalText(value: unknown): string | null | undefined {
   return undefined;
 }
 
+function optionalNumber(value: unknown): number | null | undefined {
+  if (value === null) return null;
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  return undefined;
+}
+
+function requireNumber(value: unknown, label: string): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    throw new StoreError(400, `${label} is required`);
+  }
+  return value;
+}
+
 export async function POST(request: Request) {
   try {
     const json = await readJson(request);
@@ -23,8 +36,16 @@ export async function POST(request: Request) {
 
     const socials = isRecord(json.socials) ? json.socials : null;
     const body: CreateUserBody = {
+      phone: typeof json.phone === "string" ? json.phone : "",
+      name: typeof json.name === "string" ? json.name : "",
       handle: typeof json.handle === "string" ? json.handle : "",
       city: typeof json.city === "string" ? json.city : "",
+      cityLat: optionalNumber(json.cityLat) ?? null,
+      cityLng: optionalNumber(json.cityLng) ?? null,
+      cityPlaceId: optionalText(json.cityPlaceId) ?? null,
+      age: requireNumber(json.age, "Age"),
+      ageMin: requireNumber(json.ageMin, "Youngest age"),
+      ageMax: requireNumber(json.ageMax, "Oldest age"),
       instagram: optionalText(json.instagram) ?? optionalText(socials?.instagram) ?? null,
       tiktok: optionalText(json.tiktok) ?? optionalText(socials?.tiktok) ?? null,
       snapchat: optionalText(json.snapchat) ?? optionalText(socials?.snapchat) ?? null,

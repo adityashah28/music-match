@@ -85,15 +85,27 @@ const SCENES: Scene[] = [
   },
 ];
 
-const PROFILES: Array<{ handle: string; city: string; artists: string[] }> = [
+const PROFILES: Array<{
+  name?: string;
+  handle: string;
+  city: string;
+  age?: number;
+  ageMin?: number;
+  ageMax?: number;
+  artists: string[];
+}> = [
   {
+    name: "Maya",
     handle: "bay-indie-1",
     city: "Berkeley",
+    age: 24,
     artists: ["Mitski", "Phoebe Bridgers", "Boygenius", "Clairo", "Big Thief"],
   },
   {
+    name: "Jules",
     handle: "bay-indie-2",
     city: "Oakland",
+    age: 26,
     artists: [
       "Phoebe Bridgers",
       "Snail Mail",
@@ -103,13 +115,17 @@ const PROFILES: Array<{ handle: string; city: string; artists: string[] }> = [
     ],
   },
   {
+    name: "Sam",
     handle: "bay-indie-3",
     city: "San Francisco",
+    age: 23,
     artists: ["Big Thief", "Clairo", "Boygenius", "Soccer Mommy", "Snail Mail"],
   },
   {
+    name: "Riley",
     handle: "bay-indie-4",
     city: "Berkeley",
+    age: 27,
     artists: [
       "Japanese Breakfast",
       "Mitski",
@@ -119,8 +135,10 @@ const PROFILES: Array<{ handle: string; city: string; artists: string[] }> = [
     ],
   },
   {
+    name: "Kai",
     handle: "bay-hiphop-1",
     city: "Oakland",
+    age: 25,
     artists: [
       "Kendrick Lamar",
       "Tyler the Creator",
@@ -130,8 +148,10 @@ const PROFILES: Array<{ handle: string; city: string; artists: string[] }> = [
     ],
   },
   {
+    name: "Noah",
     handle: "bay-hiphop-2",
     city: "San Francisco",
+    age: 24,
     artists: [
       "Vince Staples",
       "Earl Sweatshirt",
@@ -141,8 +161,10 @@ const PROFILES: Array<{ handle: string; city: string; artists: string[] }> = [
     ],
   },
   {
+    name: "Avery",
     handle: "bay-hiphop-3",
     city: "Berkeley",
+    age: 22,
     artists: [
       "Tyler the Creator",
       "Kendrick Lamar",
@@ -152,8 +174,10 @@ const PROFILES: Array<{ handle: string; city: string; artists: string[] }> = [
     ],
   },
   {
+    name: "Quinn",
     handle: "bay-hiphop-4",
     city: "Oakland",
+    age: 28,
     artists: [
       "Little Simz",
       "Noname",
@@ -163,8 +187,10 @@ const PROFILES: Array<{ handle: string; city: string; artists: string[] }> = [
     ],
   },
   {
+    name: "Harper",
     handle: "bay-pop-1",
     city: "San Francisco",
+    age: 21,
     artists: [
       "Charli XCX",
       "Chappell Roan",
@@ -174,8 +200,10 @@ const PROFILES: Array<{ handle: string; city: string; artists: string[] }> = [
     ],
   },
   {
+    name: "Reese",
     handle: "bay-pop-2",
     city: "Oakland",
+    age: 23,
     artists: [
       "Chappell Roan",
       "Sabrina Carpenter",
@@ -185,13 +213,17 @@ const PROFILES: Array<{ handle: string; city: string; artists: string[] }> = [
     ],
   },
   {
+    name: "Parker",
     handle: "bay-pop-3",
     city: "Berkeley",
+    age: 25,
     artists: ["Charli XCX", "Chappell Roan", "Olivia Rodrigo", "Dua Lipa", "SZA"],
   },
   {
+    name: "Casey",
     handle: "bay-pop-4",
     city: "San Francisco",
+    age: 22,
     artists: [
       "Charli XCX",
       "Chappell Roan",
@@ -201,28 +233,38 @@ const PROFILES: Array<{ handle: string; city: string; artists: string[] }> = [
     ],
   },
   {
+    name: "Drew",
     handle: "bay-electronic-1",
     city: "Oakland",
+    age: 29,
     artists: ["Fred again..", "Bicep", "Four Tet", "Jamie xx", "Overmono"],
   },
   {
+    name: "Cameron",
     handle: "bay-electronic-2",
     city: "San Francisco",
+    age: 27,
     artists: ["Bicep", "Four Tet", "Jamie xx", "Overmono", "Charli XCX"],
   },
   {
+    name: "Rowan",
     handle: "bay-electronic-3",
     city: "Berkeley",
+    age: 26,
     artists: ["Fred again..", "Bicep", "Jamie xx", "Overmono", "Dua Lipa"],
   },
   {
+    name: "Skyler",
     handle: "bay-electronic-4",
     city: "Oakland",
+    age: 24,
     artists: ["Fred again..", "Four Tet", "Jamie xx", "Bicep", "Charli XCX"],
   },
   {
+    name: "Jordan",
     handle: "bay-rock-1",
     city: "San Francisco",
+    age: 30,
     artists: [
       "Fontaines D.C.",
       "Turnstile",
@@ -232,8 +274,10 @@ const PROFILES: Array<{ handle: string; city: string; artists: string[] }> = [
     ],
   },
   {
+    name: "Taylor",
     handle: "bay-rock-2",
     city: "Oakland",
+    age: 28,
     artists: [
       "Turnstile",
       "IDLES",
@@ -243,8 +287,10 @@ const PROFILES: Array<{ handle: string; city: string; artists: string[] }> = [
     ],
   },
   {
+    name: "Morgan",
     handle: "bay-rock-3",
     city: "Berkeley",
+    age: 25,
     artists: [
       "The Strokes",
       "Arctic Monkeys",
@@ -254,8 +300,10 @@ const PROFILES: Array<{ handle: string; city: string; artists: string[] }> = [
     ],
   },
   {
+    name: "Alex",
     handle: "bay-rock-4",
     city: "San Francisco",
+    age: 23,
     artists: [
       "Arctic Monkeys",
       "The Strokes",
@@ -265,18 +313,24 @@ const PROFILES: Array<{ handle: string; city: string; artists: string[] }> = [
     ],
   },
   {
+    name: "Blair",
     handle: "bay-rnb-1",
     city: "Oakland",
+    age: 26,
     artists: ["SZA", "Frank Ocean", "Daniel Caesar", "Giveon", "Steve Lacy"],
   },
   {
+    name: "Devon",
     handle: "bay-rnb-2",
     city: "San Francisco",
+    age: 24,
     artists: ["Frank Ocean", "Daniel Caesar", "Giveon", "Brent Faiyaz", "SZA"],
   },
   {
+    name: "Emery",
     handle: "bay-rnb-3",
     city: "Berkeley",
+    age: 22,
     artists: [
       "Steve Lacy",
       "Brent Faiyaz",
@@ -286,8 +340,10 @@ const PROFILES: Array<{ handle: string; city: string; artists: string[] }> = [
     ],
   },
   {
+    name: "Finley",
     handle: "bay-rnb-4",
     city: "Oakland",
+    age: 27,
     artists: [
       "Brent Faiyaz",
       "SZA",
@@ -496,10 +552,19 @@ export function createSeed(): DataSnapshot {
     if (profile.artists.length !== 5 || new Set(profile.artists).size !== 5) {
       throw new Error(`${profile.handle} needs 5 different artists`);
     }
+    const age = profile.age ?? 24;
     const user: StoredUser = {
       id: stableId("b2000000", index + 1),
+      name: profile.name ?? profile.handle,
       handle: profile.handle,
+      phone: null,
       city: profile.city,
+      cityLat: null,
+      cityLng: null,
+      cityPlaceId: null,
+      age,
+      ageMin: profile.ageMin ?? 18,
+      ageMax: profile.ageMax ?? 99,
       instagram: null,
       tiktok: null,
       snapchat: null,

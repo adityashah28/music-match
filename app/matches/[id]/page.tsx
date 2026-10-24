@@ -204,7 +204,7 @@ export default function MatchDetailPage() {
             <div className="mt-2">
               <div className="flex items-start justify-between gap-3">
                 <h1 className="font-display min-w-0 text-[44px] font-normal leading-[0.98] tracking-tight text-[var(--foreground)]">
-                  {match.handle}
+                  {match.name || match.handle}
                 </h1>
                 {match.isDemo ? (
                   <span className="mt-2 shrink-0 rounded-full border border-[var(--border)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
@@ -212,9 +212,11 @@ export default function MatchDetailPage() {
                   </span>
                 ) : null}
               </div>
-              {match.city ? (
-                <p className="mt-2 text-sm font-normal text-[var(--muted)]">{match.city}</p>
-              ) : null}
+              <p className="mt-2 text-sm font-normal text-[var(--muted)]">
+                {[match.handle ? `@${match.handle}` : null, match.age != null ? String(match.age) : null, match.city]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </p>
             </div>
 
             <GlassCard className="mt-5 p-5">

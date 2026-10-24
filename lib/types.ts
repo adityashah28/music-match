@@ -31,12 +31,20 @@ export type UserArtist = {
 
 export type UserPublic = {
   id: string;
+  name: string;
   handle: string;
   city: string;
+  age: number | null;
   artists: UserArtist[];
 };
 
 export type UserProfile = UserPublic & {
+  phone: string | null;
+  ageMin: number | null;
+  ageMax: number | null;
+  cityLat: number | null;
+  cityLng: number | null;
+  cityPlaceId: string | null;
   instagram: string | null;
   tiktok: string | null;
   snapchat: string | null;
@@ -44,8 +52,16 @@ export type UserProfile = UserPublic & {
 };
 
 export type CreateUserBody = {
+  phone: string;
+  name: string;
   handle: string;
   city: string;
+  cityLat?: number | null;
+  cityLng?: number | null;
+  cityPlaceId?: string | null;
+  age: number;
+  ageMin: number;
+  ageMax: number;
   instagram?: string | null;
   tiktok?: string | null;
   snapchat?: string | null;
@@ -56,12 +72,29 @@ export type CreateUserBody = {
 export type CreatedUser = UserProfile & { token: string };
 
 export type UpdateUserBody = {
+  name?: string | null;
   handle?: string | null;
   city?: string | null;
+  cityLat?: number | null;
+  cityLng?: number | null;
+  cityPlaceId?: string | null;
+  age?: number | null;
+  ageMin?: number | null;
+  ageMax?: number | null;
   instagram?: string | null;
   tiktok?: string | null;
   snapchat?: string | null;
   artists?: ArtistInput[];
+};
+
+export type CitySuggestion = {
+  id: string;
+  label: string;
+  city: string;
+  region: string | null;
+  country: string | null;
+  lat: number;
+  lng: number;
 };
 
 export type RealSocials = {
@@ -97,8 +130,10 @@ export type MatchShow = {
 
 export type MatchCard = {
   userId: string;
+  name: string;
   handle: string;
   city: string;
+  age: number | null;
   isDemo: boolean;
   label: string;
   score: number;
@@ -171,8 +206,12 @@ export type CrowdResponse = {
 
 export type MatchPerson = {
   id: string;
+  name: string;
   handle: string;
   city: string;
+  age: number | null;
+  ageMin: number | null;
+  ageMax: number | null;
   isDemo: boolean;
   instagram: string | null;
   tiktok: string | null;
@@ -194,8 +233,16 @@ export type InterestEdge = {
 
 export type StoredUser = {
   id: string;
+  name: string;
   handle: string;
+  phone: string | null;
   city: string;
+  cityLat: number | null;
+  cityLng: number | null;
+  cityPlaceId: string | null;
+  age: number | null;
+  ageMin: number | null;
+  ageMax: number | null;
   instagram: string | null;
   tiktok: string | null;
   snapchat: string | null;

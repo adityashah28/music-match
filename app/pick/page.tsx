@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArtistChip, ArtistResult } from "@/components/ArtistChip";
 import { BackLink } from "@/components/BackLink";
 import { GradientBackground } from "@/components/GradientBackground";
+import { OnboardingProgress } from "@/components/OnboardingProgress";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { Skeleton } from "@/components/Skeleton";
 import {
@@ -26,8 +27,17 @@ export default function PickPage() {
   const [notice, setNotice] = useState("");
 
   useEffect(() => {
-    setArtists(getDraft().artists);
-  }, []);
+    const draft = getDraft();
+    if (!draft.phoneVerified) {
+      router.replace("/phone");
+      return;
+    }
+    if (draft.age == null) {
+      router.replace("/age");
+      return;
+    }
+    setArtists(draft.artists);
+  }, [router]);
 
   useEffect(() => {
     const q = query.trim();
@@ -93,7 +103,7 @@ export default function PickPage() {
     if (artists.length < 1) return;
     const draft = getDraft();
     setDraft({ ...draft, artists });
-    router.push("/about");
+    router.push("/socials");
   }
 
   const searchingQuery = Boolean(query.trim());
@@ -101,7 +111,8 @@ export default function PickPage() {
   return (
     <GradientBackground>
       <main className="screen screen-pick screen-end flex min-h-dvh flex-col pb-28 md:pb-10">
-        <BackLink href="/" label="Resonate" />
+        <BackLink href="/age" />
+        <OnboardingProgress step="pick" />
 
         <div className="grid flex-1 grid-cols-1 gap-8 md:grid-cols-[minmax(17rem,24rem)_minmax(0,1fr)] md:items-start md:gap-10 lg:grid-cols-[minmax(20rem,26rem)_minmax(0,1fr)] lg:gap-14">
           <div className="min-w-0 md:sticky md:top-24 md:self-start">

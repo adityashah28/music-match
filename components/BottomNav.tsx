@@ -4,7 +4,16 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 
-const HIDDEN = new Set(["/", "/pick", "/about", "/socials", "/finding"]);
+const HIDDEN = new Set([
+  "/",
+  "/phone",
+  "/verify",
+  "/about",
+  "/age",
+  "/pick",
+  "/socials",
+  "/finding",
+]);
 
 const ITEMS = [
   { href: "/matches", label: "Matches", icon: MatchesIcon },

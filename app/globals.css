@@ -18,6 +18,8 @@
   --content-max: 42rem;
   --content-wide: 64rem;
   --content-hero: 72rem;
+  /* 0.2em sank labels; ~0.08em centers Khula ink in pills */
+  --btn-label-nudge: 0.08em;
 }
 
 @theme inline {
@@ -64,11 +66,33 @@ h3 {
   letter-spacing: -0.02em;
 }
 
-/* Khula sits optically high in pills — wrap button text in .btn-label */
+/* Optical label nudge for Khula in pills (PrimaryButton, SiteHeader, chips). */
 .btn-label {
   display: inline-block;
   line-height: 1;
+  transform: translateY(var(--btn-label-nudge));
+}
+
+/* Same 0.08em drop when a centered control forgot .btn-label.
+   Flex centering only uses half of the extra top padding.
+   :has(.btn-label) keeps existing pills from shifting twice. */
+:is(button, a).items-center.justify-center:not(:has(.btn-label)) {
+  padding-top: calc(var(--btn-label-nudge) * 2);
+}
+
+/* Shared text control inside .field — do not share nudge with .btn-label.
+   The descendant rule makes .field-control optional. */
+.field :is(input, select, textarea):not([type="range"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.field-control {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  line-height: 1;
   transform: translateY(0.2em);
+  outline: none;
+  color: inherit;
 }
 
 /* Light gallery panel — replaces glass */
@@ -96,6 +120,17 @@ h3 {
 .field:focus-within {
   border-color: rgba(18, 18, 18, 0.35);
   outline: none;
+}
+
+/* OTP digit cells — rounded square, not pill */
+.field-digit {
+  border-radius: 14px;
+}
+
+@media (min-width: 640px) {
+  .field-digit {
+    border-radius: 16px;
+  }
 }
 
 .screen {
@@ -312,12 +347,42 @@ h3 {
   transform: translateY(-2px);
 }
 
+@keyframes onboarding-segment {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.onboarding-segment {
+  transform-origin: left center;
+  animation: onboarding-segment 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes setup-fill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.setup-fill {
+  transform-origin: left center;
+  animation: setup-fill 1.8s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .bg-layer,
   .chip-enter,
   .finding-chip,
   .hero-rise,
-  .gallery-tile-inner {
+  .gallery-tile-inner,
+  .onboarding-segment,
+  .setup-fill {
     animation: none;
   }
 

@@ -211,7 +211,7 @@ export default function MatchesPage() {
             {skipped ? (
               <div className="flex min-h-12 items-center justify-between gap-3 rounded-full border border-[var(--border)] bg-[var(--surface)] py-1 pl-5 pr-1.5">
                 <p className="min-w-0 truncate text-sm font-normal text-[var(--muted)]">
-                  Skipped {skipped.match.handle}. They won&apos;t be told.
+                  Skipped {skipped.match.name || skipped.match.handle}. They won&apos;t be told.
                 </p>
                 <button
                   type="button"

@@ -47,9 +47,13 @@ export function MatchCard({
           ) : null}
           <div className="absolute inset-x-4 bottom-3">
             <p className="truncate text-[2rem] font-semibold leading-none tracking-tight text-white">
-              {match.handle}
+              {match.name || match.handle}
             </p>
-            {match.city ? <p className="mt-1 truncate text-sm font-normal text-white/80">{match.city}</p> : null}
+            <p className="mt-1 truncate text-sm font-normal text-white/80">
+              {[match.handle !== match.name ? `@${match.handle}` : null, match.age != null ? String(match.age) : null, match.city]
+                .filter(Boolean)
+                .join(" · ")}
+            </p>
           </div>
         </div>
         <div className="px-4 pt-4">

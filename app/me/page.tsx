@@ -7,6 +7,8 @@ import { GlassCard } from "@/components/GlassCard";
 import { GradientBackground } from "@/components/GradientBackground";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { Skeleton } from "@/components/Skeleton";
+import { CityAutocomplete, type CityValue } from "@/components/CityAutocomplete";
+import { AGE_MAX, AGE_MIN, clampAge } from "@/lib/age";
 import {
   artistKey,
   fetchJson,
@@ -24,8 +26,18 @@ export default function MePage() {
   const [reload, setReload] = useState(0);
   const [profileId, setProfileId] = useState("");
 
+  const [name, setName] = useState("");
   const [handle, setHandle] = useState("");
-  const [city, setCity] = useState("");
+  const [city, setCity] = useState<CityValue>({
+    city: "",
+    label: "",
+    lat: null,
+    lng: null,
+    placeId: null,
+  });
+  const [age, setAge] = useState(24);
+  const [ageMin, setAgeMin] = useState(AGE_MIN);
+  const [ageMax, setAgeMax] = useState(AGE_MAX);
   const [instagram, setInstagram] = useState("");
   const [tiktok, setTiktok] = useState("");
   const [snapchat, setSnapchat] = useState("");
@@ -63,8 +75,18 @@ export default function MePage() {
           setError(true);
           return;
         }
+        setName(profile.name);
         setHandle(profile.handle);
-        setCity(profile.city);
+        setCity({
+          city: profile.city,
+          label: profile.city,
+          lat: profile.cityLat,
+          lng: profile.cityLng,
+          placeId: profile.cityPlaceId,
+        });
+        if (profile.age != null) setAge(profile.age);
+        if (profile.ageMin != null) setAgeMin(profile.ageMin);
+        if (profile.ageMax != null) setAgeMax(profile.ageMax);
         setInstagram(profile.socials.instagram);
         setTiktok(profile.socials.tiktok);
         setSnapchat(profile.socials.snapchat);
@@ -146,9 +168,25 @@ export default function MePage() {
       router.replace("/");
       return;
     }
-    const nextHandle = handle.trim();
+    const nextName = name.trim();
+    const nextHandle = handle.trim().replace(/^@+/, "");
+    if (!nextName) {
+      setSaveError("Add your name.");
+      setSaved(false);
+      return;
+    }
     if (!nextHandle) {
       setSaveError("Add a handle so people know who you are.");
+      setSaved(false);
+      return;
+    }
+    if (!city.city.trim()) {
+      setSaveError("Add your city.");
+      setSaved(false);
+      return;
+    }
+    if (ageMin > ageMax) {
+      setSaveError("Age range is backwards.");
       setSaved(false);
       return;
     }
@@ -158,8 +196,15 @@ export default function MePage() {
     setSaved(false);
 
     const next = {
+      name: nextName,
       handle: nextHandle,
-      city: city.trim() || "Berkeley",
+      city: city.city.trim(),
+      cityLat: city.lat,
+      cityLng: city.lng,
+      cityPlaceId: city.placeId,
+      age: clampAge(age),
+      ageMin: clampAge(ageMin),
+      ageMax: clampAge(ageMax),
       instagram: instagram.trim(),
       tiktok: tiktok.trim(),
       snapchat: snapchat.trim(),
@@ -174,18 +219,22 @@ export default function MePage() {
       });
       const profile = normalizeProfile(data, id);
       if (profile) {
+        setName(profile.name);
         setHandle(profile.handle);
-        setCity(profile.city);
+        setCity({
+          city: profile.city,
+          label: profile.city,
+          lat: profile.cityLat,
+          lng: profile.cityLng,
+          placeId: profile.cityPlaceId,
+        });
+        if (profile.age != null) setAge(profile.age);
+        if (profile.ageMin != null) setAgeMin(profile.ageMin);
+        if (profile.ageMax != null) setAgeMax(profile.ageMax);
         setInstagram(profile.socials.instagram);
         setTiktok(profile.socials.tiktok);
         setSnapchat(profile.socials.snapchat);
         setArtists(profile.artists);
-      } else {
-        setHandle(next.handle);
-        setCity(next.city);
-        setInstagram(next.instagram);
-        setTiktok(next.tiktok);
-        setSnapchat(next.snapchat);
       }
       setSaved(true);
     } catch {
@@ -205,7 +254,7 @@ export default function MePage() {
           Profile
         </h1>
         <p className="mt-3 text-base font-normal leading-snug text-[var(--muted)]">
-          Handle, city, socials, and up to five artists.
+          Name, handle, city, age, socials, and artists.
         </p>
 
         {loading ? (
@@ -230,6 +279,15 @@ export default function MePage() {
           <div className="mt-6 flex flex-col gap-4">
             <GlassCard className="flex flex-col gap-5 p-5">
               <Field
+                id="name"
+                label="Name"
+                value={name}
+                onChange={edit(setName)}
+                placeholder="Maya"
+                autoComplete="name"
+                capitalize
+              />
+              <Field
                 id="handle"
                 label="Handle"
                 value={handle}
@@ -237,15 +295,71 @@ export default function MePage() {
                 placeholder="maya"
                 autoComplete="nickname"
               />
-              <Field
-                id="city"
-                label="City"
+              <CityAutocomplete
                 value={city}
-                onChange={edit(setCity)}
-                placeholder="Berkeley"
-                autoComplete="address-level2"
-                capitalize
+                onChange={(next) => {
+                  setSaved(false);
+                  setCity(next);
+                }}
               />
+              <div>
+                <label className="block text-sm font-normal text-[var(--muted)]" htmlFor="age">
+                  Your age
+                </label>
+                <div className="field mt-2 flex min-h-12 w-full items-center px-4">
+                  <input
+                    id="age"
+                    type="number"
+                    min={AGE_MIN}
+                    max={AGE_MAX}
+                    value={age}
+                    onChange={(event) => {
+                      setSaved(false);
+                      setAge(clampAge(Number(event.target.value) || AGE_MIN));
+                    }}
+                    className="text-base font-normal"
+                  />
+                </div>
+              </div>
+              <div>
+                <p className="text-sm font-normal text-[var(--muted)]">
+                  Show me ages {ageMin}–{ageMax}
+                </p>
+                <label className="mt-3 block text-sm font-normal text-[var(--muted)]" htmlFor="age-min">
+                  Youngest
+                </label>
+                <input
+                  id="age-min"
+                  type="range"
+                  min={AGE_MIN}
+                  max={AGE_MAX}
+                  value={ageMin}
+                  onChange={(event) => {
+                    setSaved(false);
+                    const next = clampAge(Number(event.target.value));
+                    setAgeMin(next);
+                    if (next > ageMax) setAgeMax(next);
+                  }}
+                  className="mt-2 w-full accent-[var(--foreground)]"
+                />
+                <label className="mt-3 block text-sm font-normal text-[var(--muted)]" htmlFor="age-max">
+                  Oldest
+                </label>
+                <input
+                  id="age-max"
+                  type="range"
+                  min={AGE_MIN}
+                  max={AGE_MAX}
+                  value={ageMax}
+                  onChange={(event) => {
+                    setSaved(false);
+                    const next = clampAge(Number(event.target.value));
+                    setAgeMax(next);
+                    if (next < ageMin) setAgeMin(next);
+                  }}
+                  className="mt-2 w-full accent-[var(--foreground)]"
+                />
+              </div>
             </GlassCard>
 
             <GlassCard className="flex flex-col gap-5 p-5">
@@ -353,6 +467,12 @@ export default function MePage() {
             <PrimaryButton onClick={save} disabled={saving}>
               {saving ? "Saving…" : "Save"}
             </PrimaryButton>
+            <a
+              href="/logout"
+              className="font-sans inline-flex min-h-11 w-full items-center justify-center text-center text-base font-normal leading-none text-[var(--muted)]"
+            >
+              <span className="btn-label">Sign out</span>
+            </a>
           </div>
         ) : null}
       </main>
@@ -399,16 +519,18 @@ function Field({
       <label className="block text-sm font-normal text-[var(--muted)]" htmlFor={id}>
         {label}
       </label>
-      <input
-        id={id}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder={placeholder}
-        autoComplete={autoComplete}
-        autoCapitalize={capitalize ? "words" : "none"}
-        autoCorrect="off"
-        className="field mt-2 min-h-12 w-full px-4 text-base font-normal outline-none placeholder:text-[var(--muted)]"
-      />
+      <div className="field mt-2 flex min-h-12 w-full items-center px-4">
+        <input
+          id={id}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={placeholder}
+          autoComplete={autoComplete}
+          autoCapitalize={capitalize ? "words" : "none"}
+          autoCorrect="off"
+          className="text-base font-normal placeholder:text-[var(--muted)]"
+        />
+      </div>
     </div>
   );
 }
