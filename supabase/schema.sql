@@ -1,0 +1,125 @@
+-- Resonate tables. Route handlers use the service role. Anon and authenticated
+-- have no policies and no grants, so socials cannot be read with the public key.
+
+create extension if not exists pgcrypto;
+
+create table if not exists users (
+  id uuid primary key default gen_random_uuid(),
+  handle text,
+  city text,
+  instagram text,
+  tiktok text,
+  snapchat text,
+  is_demo boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists artists (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  normalized_name text not null,
+  image_url text,
+  dominant_color_hex text,
+  monthly_listeners integer,
+  genres text[] not null default '{}',
+  spotify_id text,
+  source text,
+  updated_at timestamptz not null default now()
+);
+
+create unique index if not exists artists_normalized_name_key on artists (normalized_name);
+create unique index if not exists artists_spotify_id_key on artists (spotify_id) where spotify_id is not null;
+
+create table if not exists artist_related (
+  artist_id uuid not null references artists (id) on delete cascade,
+  related_artist_id uuid not null references artists (id) on delete cascade,
+  rank integer not null,
+  primary key (artist_id, related_artist_id),
+  check (artist_id <> related_artist_id)
+);
+
+create table if not exists user_artists (
+  user_id uuid not null references users (id) on delete cascade,
+  artist_id uuid not null references artists (id) on delete cascade,
+  position integer not null check (position between 1 and 5),
+  primary key (user_id, artist_id),
+  unique (user_id, position)
+);
+
+create table if not exists shows (
+  id uuid primary key default gen_random_uuid(),
+  artist_name text not null,
+  normalized_artist_name text not null,
+  venue text,
+  city text,
+  starts_at timestamptz,
+  ticket_url text,
+  source text,
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists shows_normalized_artist_name_idx on shows (normalized_artist_name);
+create index if not exists shows_starts_at_idx on shows (starts_at);
+
+create table if not exists show_rsvps (
+  user_id uuid not null references users (id) on delete cascade,
+  show_id uuid not null references shows (id) on delete cascade,
+  status text not null check (status in ('going', 'maybe', 'not_going')),
+  primary key (user_id, show_id)
+);
+
+create table if not exists match_interest (
+  user_id uuid not null references users (id) on delete cascade,
+  other_user_id uuid not null references users (id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (user_id, other_user_id),
+  check (user_id <> other_user_id)
+);
+
+-- One-way: user_id hid other_user_id from their matches. Never shown to other_user_id.
+create table if not exists match_skip (
+  user_id uuid not null references users (id) on delete cascade,
+  other_user_id uuid not null references users (id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (user_id, other_user_id),
+  check (user_id <> other_user_id)
+);
+
+create table if not exists search_cache (
+  query text primary key,
+  results jsonb not null,
+  created_at timestamptz not null default now()
+);
+
+comment on table users is
+  'Social columns are returned only by the route for that user id, or when match_interest exists in both directions. Demo profiles get a placeholder instead of a link.';
+
+do $rls$
+declare
+  tbl text;
+begin
+  foreach tbl in array array[
+    'users',
+    'artists',
+    'artist_related',
+    'user_artists',
+    'shows',
+    'show_rsvps',
+    'match_interest',
+    'match_skip',
+    'search_cache'
+  ]
+  loop
+    execute format('alter table public.%I enable row level security', tbl);
+    if exists (select 1 from pg_roles where rolname = 'anon') then
+      execute format('revoke all on table public.%I from anon', tbl);
+    end if;
+    if exists (select 1 from pg_roles where rolname = 'authenticated') then
+      execute format('revoke all on table public.%I from authenticated', tbl);
+    end if;
+    if exists (select 1 from pg_roles where rolname = 'service_role') then
+      execute format('grant all on table public.%I to service_role', tbl);
+    end if;
+  end loop;
+end
+$rls$;
