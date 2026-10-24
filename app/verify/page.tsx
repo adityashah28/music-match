@@ -180,6 +180,10 @@ export default function VerifyPage() {
                     if (next.length < 6) autoSubmittedCode.current = "";
                     if (error) setError("");
                   }}
+                  onEnter={() => {
+                    if (busy || code.length !== 6) return;
+                    void continueNext();
+                  }}
                   disabled={busy}
                   autoFocus
                   aria-labelledby="code-label"

@@ -7,6 +7,8 @@ const LENGTH = 6;
 type OtpInputProps = {
   value: string;
   onChange: (value: string) => void;
+  /** Enter in a digit box — same as pressing the form’s primary submit. */
+  onEnter?: () => void;
   id?: string;
   disabled?: boolean;
   autoFocus?: boolean;
@@ -21,6 +23,7 @@ function onlyDigits(raw: string) {
 export function OtpInput({
   value,
   onChange,
+  onEnter,
   id = "otp",
   disabled,
   autoFocus,
@@ -67,6 +70,18 @@ export function OtpInput({
   }
 
   function handleKeyDown(index: number, event: KeyboardEvent<HTMLInputElement>) {
+    // Multi-box OTP inputs do not reliably trigger native form submit on Enter.
+    // Match About: treat Enter as confirming the primary action.
+    if (event.key === "Enter") {
+      event.preventDefault();
+      if (onEnter) {
+        onEnter();
+      } else {
+        event.currentTarget.form?.requestSubmit();
+      }
+      return;
+    }
+
     if (event.key === "Backspace") {
       event.preventDefault();
       if (digits[index]) {

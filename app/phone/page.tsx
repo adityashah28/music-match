@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import { BackLink } from "@/components/BackLink";
 import { GradientBackground } from "@/components/GradientBackground";
 import { OnboardingProgress } from "@/components/OnboardingProgress";
 import { PrimaryButton } from "@/components/PrimaryButton";
-import { fetchJson, getDraft, getUserId, onboardingHref, setDraft } from "@/lib/client";
+import { fetchJson, getDraft, getUserId, setDraft } from "@/lib/client";
 import {
   composeE164,
   DEFAULT_DIAL_CODE,
@@ -29,10 +29,7 @@ export default function PhonePage() {
       return;
     }
     const draft = getDraft();
-    if (draft.phoneVerified) {
-      router.replace(onboardingHref(draft));
-      return;
-    }
+    // Allow returning here from Verify — don't bounce forward when already verified.
     if (draft.phone) {
       const parts = splitE164(draft.phone);
       setDialCode(parts.dialCode);
@@ -77,6 +74,13 @@ export default function PhonePage() {
     }
   }
 
+  function onPhoneKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    if (busy || !phone.trim()) return;
+    void continueNext();
+  }
+
   if (existingSession) {
     return (
       <GradientBackground>
@@ -109,55 +113,64 @@ export default function PhonePage() {
           We’ll text a code. Same number logs you back in later.
         </p>
 
-        <p className="mt-8 text-sm font-normal text-[var(--muted)]" id="phone-label">
-          Phone
-        </p>
-        <div className="mt-2 flex w-full items-stretch gap-2">
-          <label
-            className="field flex h-12 shrink-0 items-center px-3 sm:px-4"
-            htmlFor="dial-code"
-          >
-            <span className="sr-only">Country code</span>
-            <select
-              id="dial-code"
-              value={dialCode}
-              onChange={(event) => setDialCode(event.target.value as DialCode)}
-              className="field-control w-[4.75rem] cursor-pointer text-base font-normal text-[var(--foreground)]"
-              aria-label="Country code"
+        <form
+          className="flex min-h-0 flex-1 flex-col"
+          onSubmit={(event: FormEvent) => {
+            event.preventDefault();
+            void continueNext();
+          }}
+        >
+          <p className="mt-8 text-sm font-normal text-[var(--muted)]" id="phone-label">
+            Phone
+          </p>
+          <div className="mt-2 flex w-full items-stretch gap-2">
+            <label
+              className="field flex h-12 shrink-0 items-center px-3 sm:px-4"
+              htmlFor="dial-code"
             >
-              {DIAL_CODES.map((row) => (
-                <option key={row.code} value={row.code}>
-                  {row.label}
-                </option>
-              ))}
-            </select>
-          </label>
+              <span className="sr-only">Country code</span>
+              <select
+                id="dial-code"
+                value={dialCode}
+                onChange={(event) => setDialCode(event.target.value as DialCode)}
+                className="field-control w-[4.75rem] cursor-pointer text-base font-normal text-[var(--foreground)]"
+                aria-label="Country code"
+              >
+                {DIAL_CODES.map((row) => (
+                  <option key={row.code} value={row.code}>
+                    {row.label}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-          <label
-            className="field flex h-12 min-w-0 flex-1 items-center px-4"
-            htmlFor="phone"
-            aria-labelledby="phone-label"
-          >
-            <input
-              id="phone"
-              type="tel"
-              inputMode="tel"
-              autoComplete="tel-national"
-              value={phone}
-              onChange={(event) => setPhone(event.target.value)}
-              placeholder={dialCode === "+1" ? "(415) 555-0100" : "Phone number"}
-              className="field-control text-base font-normal text-[var(--foreground)] placeholder:text-[var(--muted)]"
-            />
-          </label>
-        </div>
+            <label
+              className="field flex h-12 min-w-0 flex-1 items-center px-4"
+              htmlFor="phone"
+              aria-labelledby="phone-label"
+            >
+              <input
+                id="phone"
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel-national"
+                value={phone}
+                onChange={(event) => setPhone(event.target.value)}
+                onKeyDown={onPhoneKeyDown}
+                placeholder={dialCode === "+1" ? "(415) 555-0100" : "Phone number"}
+                className="field-control text-base font-normal text-[var(--foreground)] placeholder:text-[var(--muted)]"
+              />
+            </label>
+          </div>
 
-        {error ? <p className="mt-4 text-sm font-normal text-[var(--muted)]">{error}</p> : null}
+          {error ? <p className="mt-4 text-sm font-normal text-[var(--muted)]">{error}</p> : null}
 
-        <div className="sticky bottom-0 z-20 mt-auto pt-8">
-          <PrimaryButton onClick={continueNext} disabled={busy || !phone.trim()}>
-            {busy ? "Sending…" : "Text me a code"}
-          </PrimaryButton>
-        </div>
+          <div className="sticky bottom-0 z-20 mt-auto pt-8">
+            <PrimaryButton type="submit" disabled={busy || !phone.trim()}>
+              {busy ? "Sending…" : "Text me a code"}
+            </PrimaryButton>
+          </div>
+        </form>
       </main>
     </GradientBackground>
   );
