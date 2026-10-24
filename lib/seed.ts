@@ -571,6 +571,8 @@ export function createSeed(): DataSnapshot {
       isDemo: true,
       createdAt: SEEDED_AT,
       token: null,
+      email: null,
+      authUserId: null,
     };
     users.push(user);
     profile.artists.forEach((name, position) => {

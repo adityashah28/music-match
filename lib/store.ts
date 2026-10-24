@@ -241,9 +241,14 @@ async function replaceArtists(snapshot: DataSnapshot, userId: string, inputs: Ar
 }
 
 async function insertUser(snapshot: DataSnapshot, body: CreateUserBody): Promise<string> {
-  const phone = required(body.phone, "Phone", 20);
-  if (snapshot.users.some((row) => row.phone === phone)) {
+  // A profile signs in with a verified phone number or a verified Google account
+  const authUserId = body.authUserId?.trim() || null;
+  const phone = authUserId ? body.phone?.trim() || null : required(body.phone, "Phone", 20);
+  if (phone && snapshot.users.some((row) => row.phone === phone)) {
     throw new StoreError(409, "An account already exists for this phone number");
+  }
+  if (authUserId && snapshot.users.some((row) => row.authUserId === authUserId)) {
+    throw new StoreError(409, "An account already exists for this Google account");
   }
   const name = required(body.name, "Name", 80);
   const handle = required(body.handle, "Handle", 32);
@@ -257,6 +262,8 @@ async function insertUser(snapshot: DataSnapshot, body: CreateUserBody): Promise
     name,
     handle,
     phone,
+    email: body.email?.trim().slice(0, 254) || null,
+    authUserId,
     city,
     cityLat: optionalCoord(body.cityLat),
     cityLng: optionalCoord(body.cityLng),
@@ -648,6 +655,8 @@ function mapUser(row: Record<string, unknown>): StoredUser {
     name: text(row.name) ?? "",
     handle: text(row.handle) ?? "",
     phone: text(row.phone),
+    email: text(row.email),
+    authUserId: text(row.auth_user_id),
     city: text(row.city) ?? "",
     cityLat: num(row.city_lat),
     cityLng: num(row.city_lng),
@@ -710,6 +719,8 @@ function userRow(user: StoredUser) {
     name: user.name,
     handle: user.handle,
     phone: user.phone,
+    email: user.email,
+    auth_user_id: user.authUserId,
     city: user.city,
     city_lat: user.cityLat,
     city_lng: user.cityLng,
@@ -772,6 +783,8 @@ function userChanged(before: StoredUser, after: StoredUser): boolean {
     before.name !== after.name ||
     before.handle !== after.handle ||
     before.phone !== after.phone ||
+    before.email !== after.email ||
+    before.authUserId !== after.authUserId ||
     before.city !== after.city ||
     before.cityLat !== after.cityLat ||
     before.cityLng !== after.cityLng ||
@@ -1170,6 +1183,26 @@ export async function loginByPhone(phone: string): Promise<{ profile: UserProfil
   try {
     return await edit(async (snapshot) => {
       const user = snapshot.users.find((row) => row.phone === phone.trim());
+      if (!user) return null;
+      user.token ??= crypto.randomUUID();
+      const profile = profileOf(snapshot, user.id);
+      return profile ? { profile, token: user.token } : null;
+    });
+  } catch (error) {
+    throw wrap(error);
+  }
+}
+
+/**
+ * Log a verified Google sign-in into its profile: returns the profile and its token, or null if
+ * no profile is linked to that Supabase Auth user. Fresh load, like loginByPhone.
+ */
+export async function loginByAuthUser(
+  authUserId: string,
+): Promise<{ profile: UserProfile; token: string } | null> {
+  try {
+    return await edit(async (snapshot) => {
+      const user = snapshot.users.find((row) => row.authUserId === authUserId);
       if (!user) return null;
       user.token ??= crypto.randomUUID();
       const profile = profileOf(snapshot, user.id);

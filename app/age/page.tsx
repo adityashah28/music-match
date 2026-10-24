@@ -7,7 +7,7 @@ import { GradientBackground } from "@/components/GradientBackground";
 import { OnboardingProgress } from "@/components/OnboardingProgress";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { AGE_MAX, AGE_MIN, clampAge } from "@/lib/age";
-import { getDraft, getUserId, setDraft } from "@/lib/client";
+import { getDraft, getUserId, isVerified, setDraft } from "@/lib/client";
 
 export default function AgePage() {
   const router = useRouter();
@@ -22,7 +22,7 @@ export default function AgePage() {
       return;
     }
     const draft = getDraft();
-    if (!draft.phoneVerified) {
+    if (!isVerified(draft)) {
       router.replace("/phone");
       return;
     }

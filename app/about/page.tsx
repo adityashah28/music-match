@@ -7,7 +7,7 @@ import { CityAutocomplete, type CityValue } from "@/components/CityAutocomplete"
 import { GradientBackground } from "@/components/GradientBackground";
 import { OnboardingProgress } from "@/components/OnboardingProgress";
 import { PrimaryButton } from "@/components/PrimaryButton";
-import { getDraft, getUserId, setDraft } from "@/lib/client";
+import { getDraft, getUserId, isVerified, setDraft } from "@/lib/client";
 
 export default function AboutPage() {
   const router = useRouter();
@@ -28,7 +28,7 @@ export default function AboutPage() {
       return;
     }
     const draft = getDraft();
-    if (!draft.phoneVerified) {
+    if (!isVerified(draft)) {
       router.replace("/phone");
       return;
     }

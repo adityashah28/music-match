@@ -1,5 +1,5 @@
 import { errorResponse, readJson, StoreError } from "@/lib/errors";
-import { sendPhoneCode } from "@/lib/phone-auth";
+import { sendPhoneCode } from "@/lib/supabase-auth";
 import { normalizePhone } from "@/lib/phone";
 
 export const dynamic = "force-dynamic";

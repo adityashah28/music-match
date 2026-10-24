@@ -3,9 +3,9 @@ import { StoreError } from "@/lib/errors";
 import { normalizePhone } from "@/lib/phone";
 
 /**
- * Supabase Auth's phone login, used only to prove someone owns a number.
- * Supabase sends and checks the SMS code (through the provider set in the dashboard);
- * the app's own token in lib/auth.ts stays the session.
+ * Supabase Auth, used only to prove someone owns a phone number or a Google account.
+ * Supabase sends and checks SMS codes (through the provider set in the dashboard) and runs the
+ * Google sign-in; the app's own token in lib/auth.ts stays the session.
  */
 let client: SupabaseClient | null = null;
 
@@ -52,4 +52,22 @@ export async function phoneFromProof(proof: string): Promise<string | null> {
   if (error || !data.user?.phone) return null;
   // Supabase stores numbers without the leading "+"
   return normalizePhone(`+${data.user.phone.replace(/^\+/, "")}`);
+}
+
+export type GoogleIdentity = { authUserId: string; email: string | null; name: string | null };
+
+/**
+ * The Google account a proof belongs to (the Supabase access token from the browser's
+ * Google sign-in), or null if the proof is invalid, expired, or not from Google.
+ */
+export async function googleFromProof(proof: string): Promise<GoogleIdentity | null> {
+  if (!proof) return null;
+  const { data, error } = await auth().getUser(proof);
+  const user = data?.user;
+  if (error || !user) return null;
+  const viaGoogle = (user.identities ?? []).some((identity) => identity.provider === "google");
+  if (!viaGoogle) return null;
+  const meta = user.user_metadata ?? {};
+  const name = typeof meta.full_name === "string" ? meta.full_name : typeof meta.name === "string" ? meta.name : null;
+  return { authUserId: user.id, email: user.email ?? null, name };
 }

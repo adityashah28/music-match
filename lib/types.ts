@@ -52,7 +52,11 @@ export type UserProfile = UserPublic & {
 };
 
 export type CreateUserBody = {
-  phone: string;
+  /** Required unless the profile signs in with Google (authUserId). */
+  phone: string | null;
+  /** Set by the signup route from a verified Google sign-in, never from the request body. */
+  authUserId?: string | null;
+  email?: string | null;
   name: string;
   handle: string;
   city: string;
@@ -236,6 +240,9 @@ export type StoredUser = {
   name: string;
   handle: string;
   phone: string | null;
+  email: string | null;
+  /** Supabase Auth user of the Google account this profile signed in with. */
+  authUserId: string | null;
   city: string;
   cityLat: number | null;
   cityLng: number | null;

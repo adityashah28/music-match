@@ -13,12 +13,25 @@ Routes marked 🔒 check that the token belongs to the `userId` the request acts
 A wrong or missing token gets `401`, and `fetchJson` then clears the saved profile and
 sends the user back to `/`. Always call the API through `fetchJson` so the token is attached.
 
+## Signing in
+
+- **Google:** link the button to the `/auth/google` page. It sends the person to Google, which
+  returns them to `/auth/callback`; that page logs a known account in (goes to `/matches`) or
+  keeps the Google proof in the onboarding draft and continues to `onboardingHref()`.
+- **Phone:** `/phone` and `/verify` screens. Codes come from Supabase Auth (Twilio Verify).
+- Gate onboarding screens on `isVerified(draft)` from `lib/client.ts`, which covers both.
+- Google refuses to sign in inside in-app browsers (Discord, Instagram): ask people to open
+  the link in Safari or Chrome.
+
 ## Routes
 
 | Method | Path | Notes |
 |---|---|---|
 | GET | `/api/artists/search?q=` | Spotify if `SPOTIFY_CLIENT_ID` is set, otherwise Deezer. Cached in `search_cache` |
-| POST | `/api/users` | Signup. Body: handle, city, socials, artists. Returns profile + `token` |
+| POST | `/api/auth/google` | Body `{ accessToken }` from the Google redirect. Known account: profile + `token`. New: `authProof` + name |
+| POST | `/api/auth/phone` | Body `{ phone }`. Supabase texts a 6-digit code |
+| POST | `/api/auth/verify` | Body `{ phone, code }`. Known number: profile + `token`. New: `phoneProof` |
+| POST | `/api/users` | Signup. Needs `authProof` (Google) or `phoneProof` + `phone`. Returns profile + `token` |
 | GET 🔒 | `/api/users/[id]` | Your own profile, including your socials |
 | PATCH 🔒 | `/api/users/[id]` | Edit your profile or artists |
 | GET 🔒 | `/api/users/[id]/matches` | Socials appear only when interest is mutual |

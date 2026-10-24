@@ -8,6 +8,9 @@ create table if not exists users (
   name text,
   handle text,
   phone text,
+  email text,
+  -- Supabase Auth user that proved a Google account (Google sign-in); phone is optional for these users
+  auth_user_id uuid,
   city text,
   city_lat double precision,
   city_lng double precision,
@@ -32,6 +35,7 @@ create table if not exists users (
 );
 
 create unique index if not exists users_phone_key on users (phone) where phone is not null;
+create unique index if not exists users_auth_user_id_key on users (auth_user_id) where auth_user_id is not null;
 
 create table if not exists artists (
   id uuid primary key default gen_random_uuid(),

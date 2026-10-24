@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { getDraft, getUserId, onboardingHref } from "@/lib/client";
+import { getDraft, getUserId, isVerified, onboardingHref } from "@/lib/client";
 
 const APP_NAV = [
   { href: "/matches", label: "Matches" },
@@ -35,7 +35,7 @@ export function SiteHeader() {
     }
 
     const draft = getDraft();
-    if (draft.phoneVerified) {
+    if (isVerified(draft)) {
       setCta({ href: onboardingHref(draft), label: "Continue" });
       return;
     }

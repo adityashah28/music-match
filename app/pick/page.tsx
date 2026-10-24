@@ -10,10 +10,11 @@ import { PrimaryButton } from "@/components/PrimaryButton";
 import { Skeleton } from "@/components/Skeleton";
 import {
   artistKey,
+  type DraftArtist,
   getDraft,
+  isVerified,
   searchArtists,
   setDraft,
-  type DraftArtist,
 } from "@/lib/client";
 import { SUGGESTED_ARTISTS } from "@/lib/portraits";
 
@@ -28,7 +29,7 @@ export default function PickPage() {
 
   useEffect(() => {
     const draft = getDraft();
-    if (!draft.phoneVerified) {
+    if (!isVerified(draft)) {
       router.replace("/phone");
       return;
     }

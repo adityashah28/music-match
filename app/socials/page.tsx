@@ -9,14 +9,15 @@ import { PrimaryButton } from "@/components/PrimaryButton";
 import {
   createdUserId,
   createdUserToken,
+  type Draft,
   fetchJson,
   getDraft,
   getUserId,
+  isVerified,
   setDraft,
   setUserId,
   setUserToken,
   userPayload,
-  type Draft,
 } from "@/lib/client";
 
 export default function SocialsPage() {
@@ -33,7 +34,7 @@ export default function SocialsPage() {
       return;
     }
     const draft = getDraft();
-    if (!draft.phoneVerified) {
+    if (!isVerified(draft)) {
       router.replace("/phone");
       return;
     }
@@ -49,7 +50,7 @@ export default function SocialsPage() {
   async function submit(skip: boolean) {
     if (busy) return;
     const draft = getDraft();
-    if (!draft.phoneVerified || !draft.phone.trim()) {
+    if (!isVerified(draft)) {
       setError("Verify your phone first.");
       router.push("/phone");
       return;

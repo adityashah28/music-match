@@ -22,6 +22,8 @@ export type Draft = {
   phoneVerified: boolean;
   /** From /api/auth/verify; signup sends it back to prove the number. Expires after about an hour. */
   phoneProof: string;
+  /** From Google sign-in (/api/auth/google); signup sends it back instead of a phone proof. Expires after about an hour. */
+  authProof: string;
   name: string;
   artists: DraftArtist[];
   handle: string;
@@ -223,6 +225,7 @@ function blankDraft(): Draft {
     phone: "",
     phoneVerified: false,
     phoneProof: "",
+    authProof: "",
     name: "",
     artists: [],
     handle: "",
@@ -264,6 +267,7 @@ export function getDraft(): Draft {
       phone: typeof parsed.phone === "string" ? parsed.phone : "",
       phoneVerified: parsed.phoneVerified === true,
       phoneProof: typeof parsed.phoneProof === "string" ? parsed.phoneProof : "",
+      authProof: typeof parsed.authProof === "string" ? parsed.authProof : "",
       name: typeof parsed.name === "string" ? parsed.name : "",
       artists,
       handle: typeof parsed.handle === "string" ? parsed.handle : "",
@@ -298,8 +302,13 @@ export function clearDraft() {
 }
 
 /** Next unfinished onboarding step for a guest draft. */
+/** Has this draft proven who it is, by Google sign-in or by an SMS code? Gate onboarding steps on this. */
+export function isVerified(draft: Draft = getDraft()): boolean {
+  return Boolean(draft.authProof) || (draft.phoneVerified && Boolean(draft.phone));
+}
+
 export function onboardingHref(draft: Draft = getDraft()): string {
-  if (!draft.phoneVerified || !draft.phone) return "/phone";
+  if (!isVerified(draft)) return "/phone";
   if (!draft.name.trim() || !draft.handle.trim() || !draft.city.trim()) return "/about";
   if (draft.age == null) return "/age";
   if (draft.artists.length < 1) return "/pick";
@@ -315,6 +324,7 @@ export function userPayload(draft: Draft) {
   return {
     phone: draft.phone.trim(),
     phoneProof: draft.phoneProof,
+    authProof: draft.authProof,
     name: draft.name.trim(),
     handle: draft.handle.trim(),
     city: draft.city.trim(),
@@ -639,4 +649,43 @@ export async function searchArtists(query: string): Promise<DraftArtist[]> {
   const row = record(data);
   const raw = Array.isArray(data) ? data : row && Array.isArray(row.artists) ? row.artists : [];
   return raw.map(normalizeArtist).filter((artist): artist is DraftArtist => artist !== null);
+}
+
+/**
+ * "Continue with Google": leaves the app for Google, which returns to /auth/callback.
+ * Throws if Google sign-in isn't configured; show a message and offer another way in.
+ */
+export async function startGoogleSignIn(): Promise<void> {
+  const { startGoogle } = await import("./supabase-browser");
+  await startGoogle();
+}
+
+/**
+ * Call once on /auth/callback. Returns "existing" when the Google account already has a
+ * profile (now logged in on this device: go to /matches) or "new" (the draft now holds the
+ * Google proof and a prefilled name: continue to onboardingHref()). Throws if sign-in failed.
+ */
+export async function completeGoogleSignIn(): Promise<"existing" | "new"> {
+  const { finishGoogle } = await import("./supabase-browser");
+  const accessToken = await finishGoogle();
+  const data = await fetchJson("/api/auth/google", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ accessToken }),
+  });
+  const row = record(data);
+  const user = record(row?.user);
+  const userId = text(user?.id);
+  const token = text(row?.token);
+  if (row?.isNew === false && userId && token) {
+    setUserId(userId);
+    setUserToken(token);
+    clearDraft();
+    return "existing";
+  }
+  const authProof = text(row?.authProof);
+  if (!authProof) throw new Error("Google sign-in didn't finish");
+  const draft = getDraft();
+  setDraft({ ...draft, authProof, name: draft.name || text(row?.name) || "" });
+  return "new";
 }

@@ -1,5 +1,5 @@
 import { errorResponse, readJson, StoreError } from "@/lib/errors";
-import { checkPhoneCode } from "@/lib/phone-auth";
+import { checkPhoneCode } from "@/lib/supabase-auth";
 import { normalizePhone } from "@/lib/phone";
 import { loginByPhone } from "@/lib/store";
 

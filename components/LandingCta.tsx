@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { PrimaryButton } from "@/components/PrimaryButton";
-import { getDraft, getUserId, onboardingHref } from "@/lib/client";
+import { getDraft, getUserId, isVerified, onboardingHref } from "@/lib/client";
 
 /**
  * Phone OTP is both signup and login — one primary CTA to /phone
@@ -21,7 +21,7 @@ export function LandingCta() {
     // Old localStorage session would skip the phone screen — clear it first.
     setPhoneHref(userId ? "/logout" : "/phone");
 
-    if (!userId && draft.phoneVerified) {
+    if (!userId && isVerified(draft)) {
       setResumeHref(onboardingHref(draft));
       return;
     }
