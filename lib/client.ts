@@ -37,6 +37,26 @@ export type MatchShowItem = {
   going: "both" | "them" | "you" | null;
 };
 
+export type IcebreakerReply = {
+  /** true if you sent it, false if they did. */
+  fromMe: boolean;
+  text: string;
+  createdAt: string;
+};
+
+export type IcebreakerRound = {
+  id: string;
+  promptFromMe: boolean;
+  promptText: string;
+  promptAt: string;
+  reply: IcebreakerReply | null;
+};
+
+export type IcebreakerState = {
+  /** All rounds exchanged with this match, oldest first. The last one may still be open. */
+  rounds: IcebreakerRound[];
+};
+
 export type MatchPerson = {
   userId: string;
   handle: string;
@@ -50,7 +70,12 @@ export type MatchPerson = {
   suggestedShow: MatchShowItem | null;
   interested: boolean;
   mutual: boolean;
+  /** Whether you've chosen to share your socials with them. */
+  youShared: boolean;
+  /** True once you've both chosen to share. Authoritative — don't infer from `socials`. */
+  socialsUnlocked: boolean;
   socials: Socials;
+  icebreaker: IcebreakerState | null;
 };
 
 export type ShowItem = {
@@ -317,6 +342,37 @@ function normalizeMatchShow(value: unknown): MatchShowItem | null {
   };
 }
 
+function normalizeIcebreakerReply(value: unknown): IcebreakerReply | null {
+  const row = record(value);
+  if (!row) return null;
+  const content = text(row.text);
+  if (!content) return null;
+  return { fromMe: row.fromMe === true, text: content, createdAt: text(row.createdAt) ?? "" };
+}
+
+function normalizeIcebreaker(value: unknown): IcebreakerState | null {
+  const row = record(value);
+  if (!row) return null;
+  const raw = Array.isArray(row.rounds) ? row.rounds : [];
+  const rounds = raw
+    .map((item) => {
+      const round = record(item);
+      if (!round) return null;
+      const id = text(round.id);
+      const promptText = text(round.promptText);
+      if (!id || !promptText) return null;
+      return {
+        id,
+        promptFromMe: round.promptFromMe === true,
+        promptText,
+        promptAt: text(round.promptAt) ?? "",
+        reply: normalizeIcebreakerReply(round.reply),
+      };
+    })
+    .filter((round): round is IcebreakerRound => round !== null);
+  return { rounds };
+}
+
 export function normalizeMatch(value: unknown): MatchPerson | null {
   const row = record(value);
   if (!row) return null;
@@ -344,7 +400,10 @@ export function normalizeMatch(value: unknown): MatchPerson | null {
     suggestedShow: normalizeMatchShow(row.suggestedShow),
     interested: row.interested === true,
     mutual: row.mutual === true,
+    youShared: row.youShared === true || row.you_shared === true,
+    socialsUnlocked: row.socialsUnlocked === true || row.socials_unlocked === true,
     socials: normalizeSocials(socialSource),
+    icebreaker: normalizeIcebreaker(row.icebreaker),
   };
 }
 
@@ -494,6 +553,44 @@ export async function sendSkip(me: string, otherId: string, skipped = true) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ userId: me }),
   });
+}
+
+/** Choosing to share your socials with a match. Requires mutual interest first. */
+export async function sendShare(
+  me: string,
+  otherId: string,
+  shared = true,
+): Promise<{ youShared: boolean; socialsUnlocked: boolean; socials: Socials }> {
+  const data = await fetchJson(`/api/matches/${encodeURIComponent(otherId)}/share`, {
+    method: shared ? "POST" : "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userId: me }),
+  });
+  const row = record(data);
+  return {
+    youShared: row?.youShared === true,
+    socialsUnlocked: row?.socialsUnlocked === true,
+    socials: normalizeSocials(record(row?.socials) ?? {}),
+  };
+}
+
+/**
+ * Sends an icebreaker: either one of the fixed prompts (promptId) or your own text.
+ * Only works once the match is mutual.
+ */
+export async function sendIcebreaker(
+  me: string,
+  otherId: string,
+  promptId: string,
+  text?: string,
+): Promise<IcebreakerState> {
+  const data = await fetchJson(`/api/matches/${encodeURIComponent(otherId)}/icebreaker`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userId: me, promptId, text }),
+  });
+  const row = record(data);
+  return normalizeIcebreaker(row?.icebreaker) ?? { rounds: [] };
 }
 
 export function formatDay(value: string) {

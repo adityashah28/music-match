@@ -17,9 +17,9 @@ import {
   formatWhen,
   getUserId,
   goingNote,
-  hasSocial,
   normalizeMatches,
   sendInterest,
+  sendShare,
   sendSkip,
   socialLinks,
   type MatchPerson,
@@ -64,6 +64,7 @@ export default function MatchDetailPage() {
   const [postError, setPostError] = useState("");
   const [demoSocials, setDemoSocials] = useState(false);
   const [reload, setReload] = useState(0);
+  const [sharing, setSharing] = useState(false);
 
   useEffect(() => {
     const id = getUserId();
@@ -134,7 +135,6 @@ export default function MatchDetailPage() {
           ...match,
           interested: true,
           mutual: result.mutual,
-          socials: hasSocial(result.socials) ? result.socials : match.socials,
         },
       );
     } catch {
@@ -143,6 +143,28 @@ export default function MatchDetailPage() {
       setPosting(false);
     }
   }
+
+  async function shareSocials() {
+    const me = getUserId();
+    if (!me || !match || sharing) return;
+    setSharing(true);
+    setPostError("");
+    buzz();
+    try {
+      const result = await sendShare(me, match.userId);
+      setMatch({
+        ...match,
+        youShared: result.youShared,
+        socialsUnlocked: result.socialsUnlocked,
+        socials: result.socialsUnlocked ? result.socials : match.socials,
+      });
+    } catch {
+      setPostError("Couldn't share that. Try again.");
+    } finally {
+      setSharing(false);
+    }
+  }
+
 
   async function skip() {
     const me = getUserId();
@@ -161,6 +183,14 @@ export default function MatchDetailPage() {
   const demoProfile = Boolean(match?.isDemo || demoSocials);
   const links = match && !demoProfile ? socialLinks(match.socials) : [];
   const suggested = match?.mutual ? match.suggestedShow : null;
+  const rounds = match?.icebreaker?.rounds ?? [];
+  const latestRound = rounds[rounds.length - 1] ?? null;
+  const waitingOnYou = Boolean(latestRound && !latestRound.reply && !latestRound.promptFromMe);
+  const latestLine = latestRound
+    ? latestRound.reply
+      ? `${latestRound.reply.fromMe ? "You" : "They"}: ${latestRound.reply.text}`
+      : `${latestRound.promptFromMe ? "You" : "They"} asked: ${latestRound.promptText}`
+    : null;
 
   return (
     <GradientBackground>
@@ -257,7 +287,25 @@ export default function MatchDetailPage() {
                 <h2 className="text-[28px] font-normal leading-[1.05] tracking-tight text-[var(--foreground)]">
                   It&apos;s mutual
                 </h2>
-                {demoProfile ? (
+                {!match.socialsUnlocked ? (
+                  match.youShared ? (
+                    <p className="mt-2 text-base leading-snug text-[var(--muted)]">
+                      You shared your socials. Waiting for them to share back.
+                    </p>
+                  ) : (
+                    <>
+                      <p className="mt-2 text-base leading-snug text-[var(--muted)]">
+                        Choose to share your socials with them. They&apos;ll need to share too
+                        before either of you sees anything.
+                      </p>
+                      <div className="mt-4">
+                        <PrimaryButton onClick={shareSocials} disabled={sharing}>
+                          {sharing ? "Sharing…" : "Share your socials"}
+                        </PrimaryButton>
+                      </div>
+                    </>
+                  )
+                ) : demoProfile ? (
                   <>
                     <p className="mt-2 text-base leading-snug text-[var(--muted)]">
                       Demo profile, so these are placeholders. A real match&apos;s socials open here.
@@ -296,6 +344,32 @@ export default function MatchDetailPage() {
               </GlassCard>
             ) : null}
 
+            {match.mutual ? (
+              <Link
+                href={`/matches/${encodeURIComponent(match.userId)}/icebreaker`}
+                className="mt-4 block rounded-[var(--radius)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--foreground)]"
+              >
+                <GlassCard className="p-5">
+                  <div className="flex items-center justify-between gap-3">
+                    <h2 className="text-[28px] font-normal leading-[1.05] tracking-tight text-[var(--foreground)]">
+                      Icebreaker
+                    </h2>
+                    <span aria-hidden="true" className="shrink-0 text-xl text-[var(--muted)]">
+                      →
+                    </span>
+                  </div>
+                  <p className="mt-2 line-clamp-1 text-base leading-snug text-[var(--muted)]">
+                    {latestLine ?? "Pick a prompt to break the ice"}
+                  </p>
+                  {waitingOnYou ? (
+                    <span className="mt-3 inline-flex rounded-full bg-[var(--foreground)] px-2.5 py-1 text-xs font-normal text-white">
+                      Reply
+                    </span>
+                  ) : null}
+                </GlassCard>
+              </Link>
+            ) : null}
+
             {suggested ? (
               <GlassCard className="mt-4 p-5">
                 <p className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
@@ -323,7 +397,8 @@ export default function MatchDetailPage() {
 
             {demoProfile && !match.mutual ? (
               <p className="mt-4 text-base leading-snug text-[var(--muted)]">
-                Demo profile. It taps interested back right away, and its socials are placeholders.
+                Demo profile. It taps interested back right away, and shares back as soon as you
+                do — its socials are placeholders either way.
               </p>
             ) : null}
 
