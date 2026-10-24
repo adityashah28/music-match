@@ -14,6 +14,7 @@ import {
   getUserId,
   setDraft,
   setUserId,
+  setUserToken,
 } from "@/lib/client";
 import { formatPhoneDisplay } from "@/lib/phone";
 
@@ -80,8 +81,10 @@ export default function VerifyPage() {
         row.user && typeof row.user === "object" ? (row.user as Record<string, unknown>) : null;
       const userId = typeof user?.id === "string" ? user.id : null;
 
-      if (row.isNew === false && userId) {
+      const token = typeof row.token === "string" ? row.token : null;
+      if (row.isNew === false && userId && token) {
         setUserId(userId);
+        setUserToken(token);
         clearDraft();
         sessionStorage.removeItem("resonate_dev_otp");
         router.push("/matches");
@@ -93,6 +96,7 @@ export default function VerifyPage() {
         ...draft,
         phone: typeof row.phone === "string" ? row.phone : draft.phone,
         phoneVerified: true,
+        phoneProof: typeof row.phoneProof === "string" ? row.phoneProof : "",
       });
       sessionStorage.removeItem("resonate_dev_otp");
       router.push("/about");

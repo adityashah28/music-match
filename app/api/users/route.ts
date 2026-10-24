@@ -1,4 +1,6 @@
 import { errorResponse, readJson, StoreError } from "@/lib/errors";
+import { phoneFromProof } from "@/lib/phone-auth";
+import { normalizePhone } from "@/lib/phone";
 import { createUser } from "@/lib/store";
 import type { ArtistInput, CreateUserBody } from "@/lib/types";
 
@@ -34,9 +36,16 @@ export async function POST(request: Request) {
       return Response.json({ error: "Invalid body" }, { status: 400 });
     }
 
+    // The number must be proven by the SMS step (/api/auth/verify), not just typed in
+    const phone = await phoneFromProof(typeof json.phoneProof === "string" ? json.phoneProof : "");
+    const claimed = normalizePhone(typeof json.phone === "string" ? json.phone : "");
+    if (!phone || phone !== claimed) {
+      throw new StoreError(400, "Your phone verification expired. Go back and verify your number again.");
+    }
+
     const socials = isRecord(json.socials) ? json.socials : null;
     const body: CreateUserBody = {
-      phone: typeof json.phone === "string" ? json.phone : "",
+      phone,
       name: typeof json.name === "string" ? json.name : "",
       handle: typeof json.handle === "string" ? json.handle : "",
       city: typeof json.city === "string" ? json.city : "",

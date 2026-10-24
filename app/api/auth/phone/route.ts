@@ -1,5 +1,5 @@
 import { errorResponse, readJson, StoreError } from "@/lib/errors";
-import { generateOtpCode, saveOtp, sendSms, shouldExposeDevCode } from "@/lib/otp";
+import { sendPhoneCode } from "@/lib/phone-auth";
 import { normalizePhone } from "@/lib/phone";
 
 export const dynamic = "force-dynamic";
@@ -8,6 +8,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
+/** Supabase texts the code. For demos, add test numbers with fixed codes in the Supabase dashboard. */
 export async function POST(request: Request) {
   try {
     const json = await readJson(request);
@@ -20,26 +21,8 @@ export async function POST(request: Request) {
       throw new StoreError(400, "Enter a valid phone number");
     }
 
-    const code = generateOtpCode();
-    await saveOtp(phone, code);
-
-    let sent = false;
-    try {
-      sent = await sendSms(phone, code);
-    } catch {
-      if (!shouldExposeDevCode()) {
-        throw new StoreError(502, "Could not send a text. Try again.");
-      }
-    }
-
-    const body: { ok: true; phone: string; sent: boolean; devCode?: string } = {
-      ok: true,
-      phone,
-      sent,
-    };
-    if (shouldExposeDevCode()) body.devCode = code;
-
-    return Response.json(body);
+    await sendPhoneCode(phone);
+    return Response.json({ ok: true, phone, sent: true });
   } catch (error) {
     return errorResponse(error);
   }

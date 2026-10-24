@@ -782,7 +782,8 @@ function userChanged(before: StoredUser, after: StoredUser): boolean {
     before.instagram !== after.instagram ||
     before.tiktok !== after.tiktok ||
     before.snapchat !== after.snapchat ||
-    before.isDemo !== after.isDemo
+    before.isDemo !== after.isDemo ||
+    before.token !== after.token
   );
 }
 
@@ -1154,6 +1155,25 @@ export async function findUserByPhone(phone: string): Promise<UserProfile | null
     return await read((snapshot) => {
       const user = snapshot.users.find((row) => row.phone === normalized);
       return user ? profileOf(snapshot, user.id) : null;
+    });
+  } catch (error) {
+    throw wrap(error);
+  }
+}
+
+/**
+ * Log a verified phone number into its profile: returns the profile and its token, or null if
+ * no profile has that number. Only call after the number's ownership is proven (SMS code).
+ * Uses a fresh load, not the read cache, so a signup from another server instance is found.
+ */
+export async function loginByPhone(phone: string): Promise<{ profile: UserProfile; token: string } | null> {
+  try {
+    return await edit(async (snapshot) => {
+      const user = snapshot.users.find((row) => row.phone === phone.trim());
+      if (!user) return null;
+      user.token ??= crypto.randomUUID();
+      const profile = profileOf(snapshot, user.id);
+      return profile ? { profile, token: user.token } : null;
     });
   } catch (error) {
     throw wrap(error);

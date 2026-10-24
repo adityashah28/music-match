@@ -20,6 +20,8 @@ export type Socials = {
 export type Draft = {
   phone: string;
   phoneVerified: boolean;
+  /** From /api/auth/verify; signup sends it back to prove the number. Expires after about an hour. */
+  phoneProof: string;
   name: string;
   artists: DraftArtist[];
   handle: string;
@@ -220,6 +222,7 @@ function blankDraft(): Draft {
   return {
     phone: "",
     phoneVerified: false,
+    phoneProof: "",
     name: "",
     artists: [],
     handle: "",
@@ -260,6 +263,7 @@ export function getDraft(): Draft {
     return {
       phone: typeof parsed.phone === "string" ? parsed.phone : "",
       phoneVerified: parsed.phoneVerified === true,
+      phoneProof: typeof parsed.phoneProof === "string" ? parsed.phoneProof : "",
       name: typeof parsed.name === "string" ? parsed.name : "",
       artists,
       handle: typeof parsed.handle === "string" ? parsed.handle : "",
@@ -310,6 +314,7 @@ export function userPayload(draft: Draft) {
   };
   return {
     phone: draft.phone.trim(),
+    phoneProof: draft.phoneProof,
     name: draft.name.trim(),
     handle: draft.handle.trim(),
     city: draft.city.trim(),
