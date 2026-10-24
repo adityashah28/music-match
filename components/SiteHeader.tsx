@@ -49,11 +49,13 @@ export function SiteHeader() {
     <header className="site-header pointer-events-none fixed inset-x-0 top-0 z-50">
       <div
         className="pointer-events-auto mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-3 md:px-6"
-        style={{ paddingTop: "max(0.75rem, env(safe-area-inset-top))" }}
+        style={{
+          paddingTop: "max(1.25rem, calc(0.5rem + env(safe-area-inset-top)))",
+        }}
       >
         <Link
           href="/"
-          className="shrink-0 font-sans text-lg font-bold tracking-tight text-[var(--foreground)] uppercase transition hover:opacity-70"
+          className="font-wordmark shrink-0 text-xl font-normal text-[var(--foreground)] transition hover:opacity-70 md:text-2xl"
         >
           Resonate
         </Link>
@@ -88,22 +90,22 @@ export function SiteHeader() {
             <div className="flex items-center gap-2">
               <Link
                 href={cta.href}
-                className={`min-h-10 items-center justify-center rounded-full bg-[var(--foreground)] px-4 text-sm font-normal text-white transition hover:bg-neutral-800 ${
+                className={`font-sans min-h-10 items-center justify-center rounded-full bg-[var(--foreground)] px-4 text-center text-sm font-normal leading-none text-white transition hover:bg-neutral-800 ${
                   nav.length > 0 ? "hidden md:inline-flex" : "inline-flex"
                 }`}
               >
-                {cta.label}
+                <span className="btn-label">{cta.label}</span>
               </Link>
 
               {nav.length > 0 ? (
                 <button
                   type="button"
-                  className="inline-flex min-h-10 min-w-10 items-center justify-center border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-normal text-[var(--foreground)] md:hidden"
+                  className="font-sans inline-flex min-h-10 min-w-10 items-center justify-center border border-[var(--border)] bg-[var(--surface)] px-3 text-center text-sm font-normal leading-none text-[var(--foreground)] md:hidden"
                   aria-expanded={menuOpen}
                   aria-controls="site-mobile-menu"
                   onClick={() => setMenuOpen((open) => !open)}
                 >
-                  {menuOpen ? "Close" : "Menu"}
+                  <span className="btn-label">{menuOpen ? "Close" : "Menu"}</span>
                 </button>
               ) : null}
             </div>
@@ -129,10 +131,10 @@ export function SiteHeader() {
             ))}
             <Link
               href={cta.href}
-              className="mt-1 inline-flex min-h-11 items-center justify-center rounded-full bg-[var(--foreground)] px-4 text-sm font-normal text-white"
+              className="font-sans mt-1 inline-flex min-h-11 items-center justify-center rounded-full bg-[var(--foreground)] px-4 text-center text-sm font-normal leading-none text-white"
               onClick={() => setMenuOpen(false)}
             >
-              {cta.label}
+              <span className="btn-label">{cta.label}</span>
             </Link>
           </nav>
         </div>

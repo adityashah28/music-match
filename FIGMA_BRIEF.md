@@ -1,5 +1,7 @@
 # Resonate — Figma Make Design Brief
 
+**Live UI tokens & type:** see [`DESIGN_SYSTEM.md`](./DESIGN_SYSTEM.md) (source of truth after shipping code; prefer it over typography notes below if they conflict).
+
 Use this brief to generate screens that match the **live product**, not a generic social/music app. Prefer a **light gallery** site: airy negative space, physical portrait tiles, and focused one-item browsing — not dark glassmorphism.
 
 ---

@@ -1,19 +1,20 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Sulphur_Point } from "next/font/google";
+import { Instrument_Serif, Khula } from "next/font/google";
 import { BottomNav } from "@/components/BottomNav";
 import { SiteHeader } from "@/components/SiteHeader";
 import "./globals.css";
 
-const sulphurPoint = Sulphur_Point({
-  weight: ["300", "400", "700"],
+const khula = Khula({
+  weight: ["300", "400", "600", "700"],
   subsets: ["latin"],
-  variable: "--font-sulphur-point",
+  variable: "--font-khula",
   display: "swap",
 });
 
-const inter = Inter({
+const instrumentSerif = Instrument_Serif({
+  weight: "400",
   subsets: ["latin"],
-  variable: "--font-inter",
+  variable: "--font-instrument-serif",
   display: "swap",
 });
 
@@ -52,10 +53,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${sulphurPoint.variable} ${inter.variable} h-full antialiased`}
+      className={`${khula.variable} ${instrumentSerif.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <body className={`${inter.className} min-h-dvh text-[var(--foreground)]`}>
+      <body className={`${khula.className} min-h-dvh text-[var(--foreground)]`}>
         <div className="relative min-h-dvh w-full">
           <SiteHeader />
           {children}

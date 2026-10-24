@@ -40,7 +40,7 @@ export default function AboutPage() {
     <GradientBackground>
       <main className="screen screen-end flex min-h-dvh flex-col">
         <BackLink href="/pick" />
-        <h1 className="text-[40px] font-semibold leading-[1.02] tracking-tight text-[var(--foreground)]">
+        <h1 className="font-display text-[40px] font-normal leading-[1.02] tracking-tight text-[var(--foreground)]">
           About you
         </h1>
         <p className="mt-3 max-w-[28ch] text-base font-normal leading-snug text-[var(--muted)]">

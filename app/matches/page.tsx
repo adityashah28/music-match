@@ -134,7 +134,7 @@ export default function MatchesPage() {
   return (
     <GradientBackground>
       <main className="screen screen-nav flex min-h-dvh flex-col">
-        <h1 className="text-[40px] font-semibold leading-[1.02] tracking-tight text-[var(--foreground)]">
+        <h1 className="font-display text-[40px] font-normal leading-[1.02] tracking-tight text-[var(--foreground)]">
           Matches
         </h1>
 
@@ -217,9 +217,9 @@ export default function MatchesPage() {
                   type="button"
                   onClick={undoSkip}
                   disabled={Boolean(busyId)}
-                  className="inline-flex min-h-10 shrink-0 items-center rounded-full px-4 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--surface-soft)] disabled:opacity-40"
+                  className="font-sans inline-flex min-h-10 shrink-0 items-center justify-center rounded-full px-4 text-center text-sm font-semibold leading-none text-[var(--foreground)] transition hover:bg-[var(--surface-soft)] disabled:opacity-40"
                 >
-                  Undo
+                  <span className="btn-label">Undo</span>
                 </button>
               </div>
             ) : null}

@@ -39,9 +39,11 @@ function HeroArc({
             <div className="gallery-tile-inner">
               <ArtistImage
                 src={artist.imageUrl}
-                size={250}
+                size={500}
+                quality={90}
                 alt=""
                 className="h-full w-full object-cover"
+                sizes="(max-width: 768px) 28vw, 9rem"
                 preload={index < 3}
                 loading={index < 3 ? "eager" : "lazy"}
               />
@@ -71,15 +73,15 @@ export default function WelcomePage() {
             />
 
             <div
-              className="hero-rise relative z-10 mx-auto w-full max-w-5xl text-center"
+              className="hero-rise relative z-10 mx-auto mt-6 w-full max-w-3xl text-center md:mt-8"
               style={{ animationDelay: "0.42s" }}
             >
-              <h1 className="font-sans text-[2.25rem] font-semibold leading-[1.08] tracking-tight text-[var(--foreground)] md:text-5xl md:leading-[1.05] lg:text-[3.25rem]">
+              <h1 className="font-display text-[2.35rem] font-normal leading-[1.12] text-[var(--foreground)] md:text-5xl md:leading-[1.1] lg:text-[3.35rem]">
                 Meet people who like the same artists.
               </h1>
             </div>
             <div
-              className="cta-hover hero-rise relative z-10 mx-auto mt-8 w-full max-w-[17.5rem]"
+              className="cta-hover hero-rise relative z-10 mx-auto mt-7 w-full max-w-[17.5rem] md:mt-8"
               style={{ animationDelay: "0.56s" }}
             >
               <LandingCta />

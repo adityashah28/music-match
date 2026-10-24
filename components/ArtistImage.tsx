@@ -11,6 +11,8 @@ type ArtistImageProps = {
   style?: CSSProperties;
   fill?: boolean;
   sizes?: string;
+  /** next/image quality 1–100 (default 75). */
+  quality?: number;
   /** Preload above-the-fold / LCP images (Next.js 16). */
   preload?: boolean;
   loading?: "eager" | "lazy";
@@ -27,6 +29,7 @@ export function ArtistImage({
   style,
   fill,
   sizes,
+  quality,
   preload,
   loading,
 }: ArtistImageProps) {
@@ -40,6 +43,7 @@ export function ArtistImage({
         alt={alt}
         fill
         sizes={sizes ?? "100vw"}
+        quality={quality}
         className={className}
         style={style}
         preload={preload}
@@ -54,11 +58,12 @@ export function ArtistImage({
       alt={alt}
       width={size}
       height={size}
+      quality={quality}
       className={className}
       style={style}
       preload={preload}
       loading={loading}
-      sizes={`${size}px`}
+      sizes={sizes ?? `${size}px`}
     />
   );
 }

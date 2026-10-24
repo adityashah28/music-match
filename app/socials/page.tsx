@@ -78,7 +78,7 @@ export default function SocialsPage() {
     <GradientBackground>
       <main className="screen screen-end flex min-h-dvh flex-col">
         <BackLink href="/about" />
-        <h1 className="text-[40px] font-semibold leading-[1.02] tracking-tight text-[var(--foreground)]">
+        <h1 className="font-display text-[40px] font-normal leading-[1.02] tracking-tight text-[var(--foreground)]">
           Socials
         </h1>
         <p className="mt-3 text-base font-normal leading-snug text-[var(--muted)]">
@@ -99,9 +99,9 @@ export default function SocialsPage() {
             type="button"
             onClick={() => submit(true)}
             disabled={busy}
-            className="min-h-11 w-full text-base font-normal text-[var(--muted)] disabled:opacity-40"
+            className="font-sans inline-flex min-h-11 w-full items-center justify-center text-center text-base font-normal leading-none text-[var(--muted)] disabled:opacity-40"
           >
-            Skip for now
+            <span className="btn-label">Skip for now</span>
           </button>
         </div>
       </main>

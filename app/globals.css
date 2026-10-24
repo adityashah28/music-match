@@ -28,9 +28,11 @@
   --color-border: var(--border);
   --color-surface: var(--surface);
   --radius-card: var(--radius);
-  --font-sans: var(--font-inter), "Inter", -apple-system, system-ui, sans-serif;
-  --font-display: var(--font-sulphur-point), "Sulphur Point", -apple-system,
-    system-ui, sans-serif;
+  --font-sans: var(--font-khula), "Khula", -apple-system, system-ui, sans-serif;
+  --font-display: var(--font-instrument-serif), "Instrument Serif", Georgia,
+    serif;
+  --font-wordmark: var(--font-instrument-serif), "Instrument Serif", Georgia,
+    serif;
 }
 
 html,
@@ -41,20 +43,32 @@ body {
 }
 
 body {
-  font-family: var(--font-sans), "Inter", -apple-system, system-ui, sans-serif;
+  font-family: var(--font-sans), "Khula", -apple-system, system-ui, sans-serif;
 }
 
-/* Display titles use Inter — Sulphur Point only via .font-display (wordmark) */
 h1,
 h2,
 h3 {
-  font-family: var(--font-sans), "Inter", -apple-system, system-ui, sans-serif;
+  font-family: var(--font-display), "Instrument Serif", Georgia, serif;
+  font-weight: 400;
   letter-spacing: -0.02em;
 }
 
 .font-display {
-  font-family: var(--font-display), "Sulphur Point", -apple-system, system-ui,
-    sans-serif;
+  font-family: var(--font-display), "Instrument Serif", Georgia, serif;
+  letter-spacing: -0.01em;
+}
+
+.font-wordmark {
+  font-family: var(--font-wordmark), "Instrument Serif", Georgia, serif;
+  letter-spacing: -0.02em;
+}
+
+/* Khula sits optically high in pills — wrap button text in .btn-label */
+.btn-label {
+  display: inline-block;
+  line-height: 1;
+  transform: translateY(0.2em);
 }
 
 /* Light gallery panel — replaces glass */
@@ -247,7 +261,7 @@ h3 {
   --tile-w: calc(var(--tile-h) * 3 / 4);
   --arc-w: min(88vw, 100vw - 2.75rem);
   --arc-inset: 0.65rem;
-  margin-bottom: 2.75rem;
+  margin-bottom: 0.25rem;
 }
 
 .gallery-arc-desk {
@@ -256,7 +270,7 @@ h3 {
   --tile-w: calc(var(--tile-h) * 3 / 4);
   --arc-w: min(90vw, 68rem);
   --arc-inset: 0.85rem;
-  margin-bottom: 3.25rem;
+  margin-bottom: 0.5rem;
 }
 
 .gallery-tile {
