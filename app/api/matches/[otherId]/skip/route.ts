@@ -1,3 +1,4 @@
+import { requireUser } from "@/lib/auth";
 import { errorResponse, readJson } from "@/lib/errors";
 import { setSkip } from "@/lib/store";
 
@@ -18,6 +19,7 @@ async function handle(
     if (!userId) {
       return Response.json({ error: "User not found" }, { status: 404 });
     }
+    await requireUser(request, userId);
 
     const result = await setSkip(userId, otherId, skipped);
     if (!result) {

@@ -1,4 +1,5 @@
 const USER_KEY = "resonate_user_id";
+const TOKEN_KEY = "resonate_user_token";
 const DRAFT_KEY = "resonate_draft";
 
 export type DraftArtist = {
@@ -107,6 +108,24 @@ export function setUserId(id: string) {
   const trimmed = id.trim();
   if (!trimmed) return;
   localStorage.setItem(USER_KEY, trimmed);
+}
+
+/** Saved at signup. fetchJson sends it with every API call so the server knows it's really you. */
+export function setUserToken(token: string) {
+  const trimmed = token.trim();
+  if (!trimmed) return;
+  localStorage.setItem(TOKEN_KEY, trimmed);
+}
+
+function getUserToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(TOKEN_KEY)?.trim() || null;
+}
+
+/** Forget this device's profile, e.g. after the server rejects its token. */
+export function clearUser() {
+  localStorage.removeItem(USER_KEY);
+  localStorage.removeItem(TOKEN_KEY);
 }
 
 export function artistKey(artist: Pick<DraftArtist, "name" | "spotifyId" | "deezerId">) {
@@ -243,7 +262,15 @@ export function userPayload(draft: Draft) {
 }
 
 export async function fetchJson(input: string, init?: RequestInit): Promise<unknown> {
-  const response = await fetch(input, init);
+  const token = getUserToken();
+  const headers = new Headers(init?.headers);
+  if (token && input.startsWith("/api/")) headers.set("Authorization", `Bearer ${token}`);
+  const response = await fetch(input, { ...init, headers });
+  // The server doesn't recognize this device's profile: start onboarding again
+  if (response.status === 401 && typeof window !== "undefined") {
+    clearUser();
+    window.location.href = "/";
+  }
   let data: unknown = null;
   try {
     data = await response.json();
@@ -254,6 +281,11 @@ export async function fetchJson(input: string, init?: RequestInit): Promise<unkn
     throw new Error("request failed");
   }
   return data;
+}
+
+export function createdUserToken(value: unknown): string | null {
+  const row = record(value);
+  return row ? (text(row.token) ?? null) : null;
 }
 
 export function createdUserId(value: unknown): string | null {

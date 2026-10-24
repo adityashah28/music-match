@@ -1,3 +1,4 @@
+import { requireUser } from "@/lib/auth";
 import { errorResponse, readJson } from "@/lib/errors";
 import { setRsvp } from "@/lib/store";
 import type { RsvpStatus } from "@/lib/types";
@@ -24,6 +25,7 @@ export async function POST(
     if (!userId) {
       return Response.json({ error: "User not found" }, { status: 404 });
     }
+    await requireUser(request, userId);
     if (!status) {
       return Response.json({ error: "Invalid status" }, { status: 400 });
     }

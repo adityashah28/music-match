@@ -1,3 +1,4 @@
+import { requireUser } from "@/lib/auth";
 import { errorResponse, readJson } from "@/lib/errors";
 import { setInterest } from "@/lib/store";
 
@@ -17,6 +18,7 @@ export async function POST(
     if (!userId) {
       return Response.json({ error: "User not found" }, { status: 404 });
     }
+    await requireUser(request, userId);
 
     const interest = await setInterest(userId, otherId);
     if (!interest) {

@@ -1,3 +1,4 @@
+import { requireUser } from "@/lib/auth";
 import { errorResponse, readJson } from "@/lib/errors";
 import { getUser, updateUser } from "@/lib/store";
 import type { ArtistInput, UpdateUserBody } from "@/lib/types";
@@ -15,11 +16,12 @@ function optionalText(value: unknown): string | null | undefined {
 }
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id } = await params;
+    await requireUser(request, id);
     const user = await getUser(id);
     if (!user) {
       return Response.json({ error: "User not found" }, { status: 404 });
@@ -36,6 +38,7 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params;
+    await requireUser(request, id);
     const json = await readJson(request);
     if (!isRecord(json)) {
       return Response.json({ error: "Invalid body" }, { status: 400 });

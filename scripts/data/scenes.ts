@@ -1,0 +1,71 @@
+// Seed artists grouped by scene. The scene becomes the artist's genre tag, and demo profiles
+// are built mostly from one scene so they match each other in believable clusters.
+// Each list mixes huge names with smaller ones, so rarity weighting has something to do.
+// An artist can appear in two scenes; it gets both tags.
+export const SCENES: Record<string, string[]> = {
+  indie: [
+    "Mitski", "Phoebe Bridgers", "Japanese Breakfast", "Clairo", "boygenius", "Big Thief",
+    "Snail Mail", "Soccer Mommy", "Alvvays", "Beach House", "Mac DeMarco", "Faye Webster",
+    "Men I Trust", "Wet Leg", "beabadoobee", "Lucy Dacus", "Julien Baker", "Weyes Blood",
+    "Cigarettes After Sex", "Vampire Weekend", "Bon Iver", "Fleet Foxes", "Sufjan Stevens",
+    "The National", "Bleachers", "Car Seat Headrest", "Alex G", "Adrianne Lenker", "Wallows",
+    "Dayglow", "Rex Orange County", "Mk.gee", "Hovvdy", "Wednesday", "MJ Lenderman",
+    "Waxahatchee", "Jay Som", "Indigo De Souza", "Pinegrove", "Slowdive", "The Marías",
+    "Ethel Cain", "Hippo Campus", "Glass Animals", "Toro y Moi",
+  ],
+  hiphop: [
+    "Kendrick Lamar", "Drake", "Tyler, The Creator", "J. Cole", "Travis Scott", "Kanye West",
+    "Doechii", "JID", "Denzel Curry", "Earl Sweatshirt", "Mac Miller", "Childish Gambino",
+    "A$AP Rocky", "Baby Keem", "Vince Staples", "Freddie Gibbs", "Little Simz", "Smino",
+    "Saba", "Noname", "Joey Bada$$", "Isaiah Rashad", "Playboi Carti", "Lil Uzi Vert",
+    "21 Savage", "Metro Boomin", "Future", "Gunna", "Megan Thee Stallion", "Nicki Minaj",
+    "Ice Spice", "GloRilla", "Danny Brown", "JPEGMAFIA", "Run The Jewels", "OutKast", "Nas",
+    "Kid Cudi", "Larry June", "E-40", "Mac Dre", "Saweetie", "P-Lo", "Kenny Mason",
+  ],
+  pop: [
+    "Taylor Swift", "Olivia Rodrigo", "Sabrina Carpenter", "Chappell Roan", "Billie Eilish",
+    "Ariana Grande", "Dua Lipa", "Harry Styles", "The Weeknd", "Lorde", "Charli xcx",
+    "Troye Sivan", "Gracie Abrams", "Tate McRae", "Doja Cat", "Lady Gaga", "Rina Sawayama",
+    "Carly Rae Jepsen", "Conan Gray", "Benson Boone", "Lana Del Rey", "Halsey", "Ed Sheeran",
+    "Bruno Mars", "Post Malone", "Selena Gomez", "Kim Petras", "MARINA", "Reneé Rapp",
+    "Maisie Peters", "Laufey", "girl in red", "Tove Lo", "Caroline Polachek", "Addison Rae",
+    "Zara Larsson", "Lizzo", "Katy Perry", "Joji", "NIKI",
+  ],
+  electronic: [
+    "Fred again..", "Four Tet", "Skrillex", "Jamie xx", "Kaytranada", "Disclosure", "ODESZA",
+    "Flume", "Porter Robinson", "Madeon", "Bonobo", "Caribou", "Jon Hopkins", "Aphex Twin",
+    "Daft Punk", "Justice", "Peggy Gou", "Overmono", "Floating Points", "Bicep",
+    "RÜFÜS DU SOL", "Lane 8", "John Summit", "Fisher", "Chris Lake", "Dom Dolla", "deadmau5",
+    "Eric Prydz", "Illenium", "Zedd", "Kaskade", "San Holo", "Louis The Child", "Tycho",
+    "Sammy Virji", "Mall Grab", "Ross From Friends", "Kelly Lee Owens", "Charlotte de Witte",
+    "Amelie Lens", "Tiësto", "Calvin Harris", "Swedish House Mafia", "Nia Archives",
+    "Toro y Moi",
+  ],
+  rock: [
+    "Arctic Monkeys", "The Strokes", "Radiohead", "Foo Fighters", "Red Hot Chili Peppers",
+    "Green Day", "Paramore", "Turnstile", "IDLES", "Fontaines D.C.", "The Killers",
+    "Queens of the Stone Age", "Tame Impala", "The Black Keys", "Muse", "Linkin Park",
+    "My Chemical Romance", "Fall Out Boy", "Twenty One Pilots", "Deftones",
+    "Bring Me The Horizon", "Sleep Token", "Ghost", "Royal Blood", "Greta Van Fleet",
+    "The 1975", "Cage The Elephant", "Kings of Leon", "Phoenix", "Interpol", "The Smiths",
+    "Pixies", "Weezer", "blink-182", "Pierce The Veil", "Mannequin Pussy", "Geese",
+    "Black Country, New Road", "King Gizzard & The Lizard Wizard", "Ty Segall",
+    "The Backseat Lovers", "Inhaler", "Vundabar",
+  ],
+  rnb: [
+    "Frank Ocean", "SZA", "Steve Lacy", "Daniel Caesar", "H.E.R.", "Brent Faiyaz",
+    "Summer Walker", "Jhené Aiko", "Giveon", "Kehlani", "Syd", "The Internet", "Solange",
+    "Kali Uchis", "Victoria Monét", "Tems", "Ravyn Lenae", "Snoh Aalegra", "Leon Bridges",
+    "Anderson .Paak", "Bryson Tiller", "6LACK", "Khalid", "Usher", "Jorja Smith",
+    "Mariah the Scientist", "Coco Jones", "Tinashe", "Kelela", "FKA twigs", "Erykah Badu",
+    "D'Angelo", "Lucky Daye", "Omar Apollo", "Cleo Sol", "Sampha", "Blood Orange", "Raveena",
+    "Thundercat", "Joyce Wrice",
+  ],
+  latin: [
+    "Bad Bunny", "ROSALÍA", "KAROL G", "Peso Pluma", "J Balvin", "Rauw Alejandro", "Feid",
+    "Tainy", "Young Miko", "Junior H", "Natanael Cano", "Fuerza Regida", "Grupo Frontera",
+    "Ozuna", "Daddy Yankee", "Shakira", "Bomba Estéreo", "Cuco", "Mon Laferte",
+    "Natalia Lafourcade", "Ivan Cornejo", "Eladio Carrión", "Myke Towers", "Sech", "Tokischa",
+    "Paloma Mami", "The Marías", "Omar Apollo", "Kali Uchis",
+  ],
+};

@@ -1,3 +1,4 @@
+import { requireUser } from "@/lib/auth";
 import { errorResponse } from "@/lib/errors";
 import { getShow } from "@/lib/store";
 
@@ -13,6 +14,7 @@ export async function GET(
     if (!userId) {
       return Response.json({ error: "User not found" }, { status: 404 });
     }
+    await requireUser(request, userId);
 
     const show = await getShow(id, userId);
     if (!show) {

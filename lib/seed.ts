@@ -505,6 +505,7 @@ export function createSeed(): DataSnapshot {
       snapchat: null,
       isDemo: true,
       createdAt: SEEDED_AT,
+      token: null,
     };
     users.push(user);
     profile.artists.forEach((name, position) => {

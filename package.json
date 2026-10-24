@@ -7,7 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:spotify": "node scripts/test-spotify.mjs"
+    "test:spotify": "node scripts/test-spotify.mjs",
+    "seed:artists": "tsx --env-file=.env.local scripts/seed-artists.ts",
+    "seed:demo": "tsx --env-file=.env.local scripts/seed-demo-users.ts",
+    "seed:shows": "tsx --env-file=.env.local scripts/seed-shows.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",
@@ -24,6 +27,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.4.3",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^5"
   }
 }

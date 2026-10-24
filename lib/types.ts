@@ -52,6 +52,9 @@ export type CreateUserBody = {
   artists: ArtistInput[];
 };
 
+/** Signup response: the profile plus the token the browser must keep and send back. */
+export type CreatedUser = UserProfile & { token: string };
+
 export type UpdateUserBody = {
   handle?: string | null;
   city?: string | null;
@@ -198,6 +201,8 @@ export type StoredUser = {
   snapchat: string | null;
   isDemo: boolean;
   createdAt: string;
+  /** Proves a request comes from this user. Only ever sent back by signup. */
+  token: string | null;
 };
 
 export type StoredArtist = {

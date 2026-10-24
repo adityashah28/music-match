@@ -7,10 +7,12 @@ import { GradientBackground } from "@/components/GradientBackground";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import {
   createdUserId,
+  createdUserToken,
   fetchJson,
   getDraft,
   setDraft,
   setUserId,
+  setUserToken,
   userPayload,
   type Draft,
 } from "@/lib/client";
@@ -61,12 +63,14 @@ export default function SocialsPage() {
         body: JSON.stringify(userPayload(next)),
       });
       const id = createdUserId(data);
-      if (!id) {
+      const token = createdUserToken(data);
+      if (!id || !token) {
         setError("We saved nothing useful. Try again.");
         setBusy(false);
         return;
       }
       setUserId(id);
+      setUserToken(token);
       router.push("/finding");
     } catch {
       setError("Couldn't create your profile. Try again.");

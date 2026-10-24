@@ -11,7 +11,10 @@ create table if not exists users (
   tiktok text,
   snapchat text,
   is_demo boolean not null default false,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  -- Secret the browser keeps after signup and sends as "Authorization: Bearer <token>".
+  -- Proves a request really comes from this user. Never returned by any route except signup.
+  token uuid unique default gen_random_uuid()
 );
 
 create table if not exists artists (
@@ -24,11 +27,16 @@ create table if not exists artists (
   genres text[] not null default '{}',
   spotify_id text,
   source text,
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  -- Filled by the seed scripts (scripts/seed-artists.ts)
+  deezer_id text,
+  fan_count integer,
+  related_fetched_at timestamptz
 );
 
 create unique index if not exists artists_normalized_name_key on artists (normalized_name);
 create unique index if not exists artists_spotify_id_key on artists (spotify_id) where spotify_id is not null;
+create unique index if not exists artists_deezer_id_key on artists (deezer_id) where deezer_id is not null;
 
 create table if not exists artist_related (
   artist_id uuid not null references artists (id) on delete cascade,
@@ -46,6 +54,8 @@ create table if not exists user_artists (
   unique (user_id, position)
 );
 
+create index if not exists user_artists_artist_idx on user_artists (artist_id);
+
 create table if not exists shows (
   id uuid primary key default gen_random_uuid(),
   artist_name text not null,
@@ -55,11 +65,15 @@ create table if not exists shows (
   starts_at timestamptz,
   ticket_url text,
   source text,
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  -- The event's id in its source, so re-running the shows seed updates instead of duplicating
+  source_id text,
+  image_url text
 );
 
 create index if not exists shows_normalized_artist_name_idx on shows (normalized_artist_name);
 create index if not exists shows_starts_at_idx on shows (starts_at);
+create unique index if not exists shows_source_key on shows (source, source_id);
 
 create table if not exists show_rsvps (
   user_id uuid not null references users (id) on delete cascade,
@@ -68,6 +82,8 @@ create table if not exists show_rsvps (
   primary key (user_id, show_id)
 );
 
+create index if not exists show_rsvps_show_idx on show_rsvps (show_id);
+
 create table if not exists match_interest (
   user_id uuid not null references users (id) on delete cascade,
   other_user_id uuid not null references users (id) on delete cascade,
@@ -75,6 +91,8 @@ create table if not exists match_interest (
   primary key (user_id, other_user_id),
   check (user_id <> other_user_id)
 );
+
+create index if not exists match_interest_other_idx on match_interest (other_user_id);
 
 -- One-way: user_id hid other_user_id from their matches. Never shown to other_user_id.
 create table if not exists match_skip (

@@ -7,6 +7,7 @@ import { createSeed } from "@/lib/seed";
 import type {
   ArtistInput,
   CreateUserBody,
+  CreatedUser,
   CrowdResponse,
   DataSnapshot,
   InterestResponse,
@@ -33,6 +34,7 @@ import type {
 type Repo = {
   load(): Promise<DataSnapshot>;
   save(before: DataSnapshot, after: DataSnapshot): Promise<void>;
+  userIdForToken(token: string): Promise<string | null>;
   getCachedSearch(query: string): Promise<SearchArtist[] | null>;
   setCachedSearch(query: string, artists: SearchArtist[]): Promise<void>;
 };
@@ -222,6 +224,7 @@ async function insertUser(snapshot: DataSnapshot, body: CreateUserBody): Promise
     snapchat: cleanSocial(body.snapchat),
     isDemo: false,
     createdAt: new Date().toISOString(),
+    token: crypto.randomUUID(),
   };
   snapshot.users.push(user);
   await replaceArtists(snapshot, user.id, body.artists);
@@ -266,10 +269,21 @@ function listShowsOf(snapshot: DataSnapshot, userId: string): ShowListResponse {
     if (!matchIds.has(person.id)) continue;
     for (const artist of person.artists) names.add(normalizeName(artist.name));
   }
+  // Your scene: artists related to yours, in either direction, so the list is rarely empty
+  const mine = new Set((self?.artists ?? []).map((artist) => artist.id));
+  const byId = new Map(snapshot.artists.map((artist) => [artist.id, artist.normalizedName]));
+  for (const edge of snapshot.related) {
+    const other = mine.has(edge.artistId) ? edge.relatedArtistId : mine.has(edge.relatedArtistId) ? edge.artistId : null;
+    const name = other ? byId.get(other) : undefined;
+    if (name) names.add(name);
+  }
   const rsvps = new Map(
     snapshot.rsvps.filter((rsvp) => rsvp.userId === userId).map((rsvp) => [rsvp.showId, rsvp.status]),
   );
+  // Keep shows that started in the last few hours (people are still there), drop older ones
+  const cutoff = Date.now() - 6 * 60 * 60 * 1000;
   const shows = snapshot.shows
+    .filter((show) => !show.startsAt || Date.parse(show.startsAt) >= cutoff)
     .filter((show) => names.has(show.normalizedArtistName || normalizeName(show.artistName)))
     .sort((a, b) => {
       const left = a.startsAt ? Date.parse(a.startsAt) : Number.POSITIVE_INFINITY;
@@ -543,6 +557,11 @@ class MemoryRepo implements Repo {
     this.snapshot = after;
   }
 
+  async userIdForToken(token: string): Promise<string | null> {
+    const snapshot = await this.load();
+    return snapshot.users.find((user) => user.token === token)?.id ?? null;
+  }
+
   async getCachedSearch(query: string): Promise<SearchArtist[] | null> {
     const key = cacheKey(query);
     if (!key) return null;
@@ -571,6 +590,7 @@ function mapUser(row: Record<string, unknown>): StoredUser {
     snapchat: text(row.snapchat),
     isDemo: row.is_demo === true,
     createdAt: text(row.created_at) ?? new Date().toISOString(),
+    token: text(row.token),
   };
 }
 
@@ -624,6 +644,7 @@ function userRow(user: StoredUser) {
     snapchat: user.snapchat,
     is_demo: user.isDemo,
     created_at: user.createdAt,
+    token: user.token,
   };
 }
 
@@ -713,10 +734,19 @@ class SupabaseRepo implements Repo {
     });
   }
 
-  private async rows(table: string): Promise<Record<string, unknown>[]> {
-    const { data, error } = await this.client.from(table).select("*");
-    if (error) fail(error.message);
-    return Array.isArray(data) ? (data as Record<string, unknown>[]) : [];
+  /** Supabase caps a select at 1000 rows, so read in pages, ordered so pages never overlap. */
+  private async rows(table: string, orderBy: string[]): Promise<Record<string, unknown>[]> {
+    const PAGE = 1000;
+    const all: Record<string, unknown>[] = [];
+    for (let from = 0; ; from += PAGE) {
+      let query = this.client.from(table).select("*");
+      for (const column of orderBy) query = query.order(column);
+      const { data, error } = await query.range(from, from + PAGE - 1);
+      if (error) fail(error.message);
+      const page = Array.isArray(data) ? (data as Record<string, unknown>[]) : [];
+      all.push(...page);
+      if (page.length < PAGE) return all;
+    }
   }
 
   private async write(table: string, action: PromiseLike<{ error: { message: string } | null }>) {
@@ -726,14 +756,14 @@ class SupabaseRepo implements Repo {
 
   async load(): Promise<DataSnapshot> {
     const [users, artists, links, related, shows, rsvps, interests, skips] = await Promise.all([
-      this.rows("users"),
-      this.rows("artists"),
-      this.rows("user_artists"),
-      this.rows("artist_related"),
-      this.rows("shows"),
-      this.rows("show_rsvps"),
-      this.rows("match_interest"),
-      this.rows("match_skip"),
+      this.rows("users", ["id"]),
+      this.rows("artists", ["id"]),
+      this.rows("user_artists", ["user_id", "artist_id"]),
+      this.rows("artist_related", ["artist_id", "related_artist_id"]),
+      this.rows("shows", ["id"]),
+      this.rows("show_rsvps", ["user_id", "show_id"]),
+      this.rows("match_interest", ["user_id", "other_user_id"]),
+      this.rows("match_skip", ["user_id", "other_user_id"]),
     ]);
     return {
       users: users.map(mapUser),
@@ -887,6 +917,12 @@ class SupabaseRepo implements Repo {
     if (skipRows.length) await this.write("match_skip", this.client.from("match_skip").insert(skipRows));
   }
 
+  async userIdForToken(token: string): Promise<string | null> {
+    const { data, error } = await this.client.from("users").select("id").eq("token", token).maybeSingle();
+    if (error) fail(error.message);
+    return data ? String(data.id) : null;
+  }
+
   async getCachedSearch(query: string): Promise<SearchArtist[] | null> {
     const key = cacheKey(query);
     if (!key) return null;
@@ -959,14 +995,24 @@ async function read<T>(run: (snapshot: DataSnapshot) => T): Promise<T> {
   return run(filled(await repo().load()));
 }
 
-export async function createUser(body: CreateUserBody): Promise<UserProfile> {
+export async function createUser(body: CreateUserBody): Promise<CreatedUser> {
   try {
     return await edit(async (snapshot) => {
       const id = await insertUser(snapshot, body);
       const profile = profileOf(snapshot, id);
-      if (!profile) throw new StoreError(500, "Could not create user");
-      return profile;
+      const token = snapshot.users.find((user) => user.id === id)?.token;
+      if (!profile || !token) throw new StoreError(500, "Could not create user");
+      return { ...profile, token };
     });
+  } catch (error) {
+    throw wrap(error);
+  }
+}
+
+/** Which user owns this token, or null if none does. */
+export async function userIdForToken(token: string): Promise<string | null> {
+  try {
+    return await repo().userIdForToken(token);
   } catch (error) {
     throw wrap(error);
   }
