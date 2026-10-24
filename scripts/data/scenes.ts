@@ -68,4 +68,11 @@ export const SCENES: Record<string, string[]> = {
     "Natalia Lafourcade", "Ivan Cornejo", "Eladio Carrión", "Myke Towers", "Sech", "Tokischa",
     "Paloma Mami", "The Marías", "Omar Apollo", "Kali Uchis",
   ],
+  kpop: [
+    "BTS", "BLACKPINK", "TWICE", "Stray Kids", "NewJeans", "aespa", "LE SSERAFIM", "SEVENTEEN",
+    "ITZY", "ENHYPEN", "(G)I-DLE", "NCT 127", "NCT DREAM", "TOMORROW X TOGETHER", "ATEEZ", "IVE",
+    "Red Velvet", "BIGBANG", "EXO", "KATSEYE", "BABYMONSTER", "ILLIT", "JENNIE", "LISA", "ROSÉ",
+    "JISOO", "Jung Kook", "Jimin", "G-DRAGON", "MAMAMOO", "RIIZE", "BOYNEXTDOOR", "KISS OF LIFE",
+    "STAYC", "DEAN", "Crush", "Jay Park", "keshi", "NIKI",
+  ],
 };

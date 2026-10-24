@@ -29,7 +29,25 @@ async function main() {
   // 1. Find each artist on Deezer. Only accept an exact name match, so "Ghost" never becomes some other Ghost.
   const seededIds: string[] = [];
   const notFound: string[] = [];
+
+  // Artists already saved with all their scene tags were found on an earlier run: skip the Deezer search
+  const { data: saved } = await supabase
+    .from("artists")
+    .select("id, normalized_name, genres")
+    .in("normalized_name", [...scenesByName.keys()]);
+  const done = new Map(
+    (saved ?? [])
+      .filter((a) => scenesByName.get(a.normalized_name)!.scenes.every((s) => a.genres.includes(s)))
+      .map((a) => [a.normalized_name, a.id]),
+  );
+  if (done.size) console.log(`${done.size} already seeded, skipping their search.`);
+
   for (const [key, { name, scenes }] of scenesByName) {
+    const existingId = done.get(key);
+    if (existingId) {
+      seededIds.push(existingId);
+      continue;
+    }
     try {
       const results = await searchDeezerArtists(name, 50); // big acts can rank below the top 10 (e.g. Ghost)
       const exact = results

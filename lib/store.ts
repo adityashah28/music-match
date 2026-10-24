@@ -734,19 +734,24 @@ class SupabaseRepo implements Repo {
     });
   }
 
-  /** Supabase caps a select at 1000 rows, so read in pages, ordered so pages never overlap. */
+  /**
+   * Supabase caps a select at 1000 rows, so read in pages, ordered so pages never overlap.
+   * The first page also returns the total, then the remaining pages load in parallel.
+   */
   private async rows(table: string, orderBy: string[]): Promise<Record<string, unknown>[]> {
     const PAGE = 1000;
-    const all: Record<string, unknown>[] = [];
-    for (let from = 0; ; from += PAGE) {
-      let query = this.client.from(table).select("*");
+    const page = async (from: number, withCount: boolean) => {
+      let query = this.client.from(table).select("*", withCount ? { count: "exact" } : undefined);
       for (const column of orderBy) query = query.order(column);
-      const { data, error } = await query.range(from, from + PAGE - 1);
+      const { data, error, count } = await query.range(from, from + PAGE - 1);
       if (error) fail(error.message);
-      const page = Array.isArray(data) ? (data as Record<string, unknown>[]) : [];
-      all.push(...page);
-      if (page.length < PAGE) return all;
-    }
+      return { rows: Array.isArray(data) ? (data as Record<string, unknown>[]) : [], count: count ?? 0 };
+    };
+    const first = await page(0, true);
+    const rest = await Promise.all(
+      Array.from({ length: Math.ceil(first.count / PAGE) - 1 }, (_, i) => page((i + 1) * PAGE, false)),
+    );
+    return [first, ...rest].flatMap((p) => p.rows);
   }
 
   private async write(table: string, action: PromiseLike<{ error: { message: string } | null }>) {
@@ -950,8 +955,35 @@ class SupabaseRepo implements Repo {
   }
 }
 
-const globalStore = globalThis as typeof globalThis & { __resonateRepo?: Repo };
+const globalStore = globalThis as typeof globalThis & {
+  __resonateRepo?: Repo;
+  __resonateSnapshot?: { at: number; data: DataSnapshot };
+};
 let queue: Promise<unknown> = Promise.resolve();
+
+/**
+ * Reads reuse a snapshot for this long instead of reloading every table per request.
+ * Writes always load fresh and refresh it, so your own changes show up at once;
+ * other server instances can lag by up to this much.
+ */
+const READ_CACHE_MS = 10_000;
+let inflight: Promise<DataSnapshot> | null = null;
+
+async function cachedSnapshot(): Promise<DataSnapshot> {
+  const cached = globalStore.__resonateSnapshot;
+  if (cached && Date.now() - cached.at < READ_CACHE_MS) return cached.data;
+  // Requests arriving together share one load
+  inflight ??= repo()
+    .load()
+    .then((data) => {
+      globalStore.__resonateSnapshot = { at: Date.now(), data };
+      return data;
+    })
+    .finally(() => {
+      inflight = null;
+    });
+  return inflight;
+}
 
 function supabaseConfig(): { url: string; key: string } | null {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
@@ -982,6 +1014,7 @@ async function edit<T>(run: (snapshot: DataSnapshot) => Promise<T>): Promise<T> 
     const next = structuredClone(before);
     const result = await run(next);
     await store.save(before, next);
+    globalStore.__resonateSnapshot = { at: Date.now(), data: next };
     return result;
   });
   queue = job.then(
@@ -992,7 +1025,7 @@ async function edit<T>(run: (snapshot: DataSnapshot) => Promise<T>): Promise<T> 
 }
 
 async function read<T>(run: (snapshot: DataSnapshot) => T): Promise<T> {
-  return run(filled(await repo().load()));
+  return run(filled(await cachedSnapshot()));
 }
 
 export async function createUser(body: CreateUserBody): Promise<CreatedUser> {

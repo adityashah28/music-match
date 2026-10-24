@@ -7,18 +7,19 @@
 import { supabase } from "./lib/db";
 
 const PROFILES_PER_SCENE: Record<string, number> = {
-  indie: 5, hiphop: 4, pop: 4, electronic: 4, rnb: 4, rock: 3, latin: 2,
+  indie: 5, hiphop: 4, pop: 4, electronic: 4, rnb: 4, rock: 3, latin: 2, kpop: 3,
 };
 
 // Scenes whose fans plausibly overlap; the 5th artist comes from one of these
 const NEIGHBORS: Record<string, string[]> = {
   indie: ["rock", "pop", "rnb", "electronic"],
   hiphop: ["rnb", "electronic"],
-  pop: ["indie", "rnb", "latin"],
+  pop: ["indie", "rnb", "latin", "kpop"],
   electronic: ["indie", "hiphop", "pop"],
   rnb: ["hiphop", "pop", "indie"],
   rock: ["indie", "electronic"],
   latin: ["pop", "rnb"],
+  kpop: ["pop", "rnb"],
 };
 
 const WORDS_A = [
