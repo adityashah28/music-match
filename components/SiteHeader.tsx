@@ -43,6 +43,11 @@ export function SiteHeader() {
     setHasUserId(Boolean(userId));
 
     if (userId) {
+      // Already inside a match chat — Continue → /matches is redundant noise.
+      if (pathname.endsWith("/icebreaker")) {
+        setCta(null);
+        return;
+      }
       setCta({ kind: "link", href: "/matches", label: "Continue" });
       return;
     }
@@ -73,9 +78,6 @@ export function SiteHeader() {
   const nav = hasUserId ? [...APP_NAV] : [];
   const isLanding = pathname === "/";
   const isOnboarding = ONBOARDING_PATHS.has(pathname);
-
-  // Full-screen chat: local Back + handle only (same idea as BottomNav).
-  if (pathname.endsWith("/icebreaker")) return null;
 
   function renderCta(opts: { mobile?: boolean }) {
     if (!cta) return null;

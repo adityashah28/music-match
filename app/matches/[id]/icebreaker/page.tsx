@@ -128,21 +128,28 @@ export default function IcebreakerPage() {
     }
   }
 
+  const bubbleClass = (mine: boolean) =>
+    `inline-flex max-w-[85%] items-center rounded-[var(--radius)] px-4 py-2.5 text-base leading-snug ${
+      mine
+        ? "bg-[var(--foreground)] text-white"
+        : "border border-[var(--border)] bg-[var(--surface-soft)] text-[var(--foreground)]"
+    }`;
+
   return (
     <GradientBackground>
-      <main className="flex h-dvh flex-col overflow-hidden">
-        <div
-          className="flex shrink-0 items-center gap-3 border-b border-[var(--border)] px-4"
-          style={{ paddingTop: "max(0.75rem, env(safe-area-inset-top))", paddingBottom: "0.75rem" }}
-        >
+      <main
+        className="flex h-dvh flex-col overflow-hidden"
+        style={{ paddingTop: "calc(4.75rem + var(--safe-top))" }}
+      >
+        <div className="flex shrink-0 items-center gap-3 border-b border-[var(--border)] px-4 py-3">
           <BackLink
             href={matchId ? `/matches/${encodeURIComponent(matchId)}` : "/matches"}
             label="Back"
-            className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 text-sm font-normal text-[var(--muted)] transition duration-200 ease-out hover:text-[var(--foreground)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]"
+            className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 text-sm font-normal leading-none text-[var(--muted)] transition duration-200 ease-out hover:text-[var(--foreground)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]"
           />
           {match ? (
-            <h1 className="min-w-0 truncate text-lg font-semibold text-[var(--foreground)]">
-              {match.handle}
+            <h1 className="font-sans min-w-0 truncate text-lg font-semibold leading-none text-[var(--foreground)]">
+              <span className="btn-label">{match.handle}</span>
             </h1>
           ) : null}
         </div>
@@ -196,26 +203,18 @@ export default function IcebreakerPage() {
                     {round.promptFromMe ? "You asked" : "They asked"}
                   </p>
                   <div className={`flex ${round.promptFromMe ? "justify-end" : "justify-start"}`}>
-                    <p
-                      className={`max-w-[85%] rounded-[var(--radius)] px-4 py-2.5 text-base leading-snug ${
-                        round.promptFromMe
-                          ? "bg-[var(--foreground)] text-white"
-                          : "border border-[var(--border)] bg-[var(--surface-soft)] text-[var(--foreground)]"
-                      }`}
-                    >
-                      {round.promptText}
+                    <p className={bubbleClass(round.promptFromMe)}>
+                      <span className="inline-block translate-y-[var(--btn-label-nudge)] leading-snug">
+                        {round.promptText}
+                      </span>
                     </p>
                   </div>
                   {round.reply ? (
                     <div className={`flex ${round.reply.fromMe ? "justify-end" : "justify-start"}`}>
-                      <p
-                        className={`max-w-[85%] rounded-[var(--radius)] px-4 py-2.5 text-base leading-snug ${
-                          round.reply.fromMe
-                            ? "bg-[var(--foreground)] text-white"
-                            : "border border-[var(--border)] bg-[var(--surface-soft)] text-[var(--foreground)]"
-                        }`}
-                      >
-                        {round.reply.text}
+                      <p className={bubbleClass(round.reply.fromMe)}>
+                        <span className="inline-block translate-y-[var(--btn-label-nudge)] leading-snug">
+                          {round.reply.text}
+                        </span>
                       </p>
                     </div>
                   ) : (
@@ -255,9 +254,11 @@ export default function IcebreakerPage() {
                           type="button"
                           onClick={() => sendPrompt(prompt.id)}
                           disabled={Boolean(sendingPrompt) || sendingCustom}
-                          className="flex min-h-11 shrink-0 items-center rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 text-left font-sans text-sm font-normal whitespace-nowrap text-[var(--foreground)] transition hover:bg-[var(--surface-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)] disabled:pointer-events-none disabled:opacity-60"
+                          className="font-sans inline-flex min-h-11 shrink-0 items-center rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 text-left text-sm font-normal leading-none whitespace-nowrap text-[var(--foreground)] transition hover:bg-[var(--surface-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)] disabled:pointer-events-none disabled:opacity-60"
                         >
-                          {sendingPrompt === prompt.id ? "Sending…" : prompt.text}
+                          <span className="btn-label">
+                            {sendingPrompt === prompt.id ? "Sending…" : prompt.text}
+                          </span>
                         </button>
                       ))}
                     </div>
@@ -265,20 +266,22 @@ export default function IcebreakerPage() {
                 ) : (
                   <p className="text-sm font-normal text-[var(--muted)]">Answer their question</p>
                 )}
-                <input
-                  value={customReply}
-                  onChange={(event) => setCustomReply(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" && !event.shiftKey) {
-                      event.preventDefault();
-                      void sendText();
-                    }
-                  }}
-                  placeholder={canSendNew ? "Ask something…" : "Say something…"}
-                  maxLength={240}
-                  disabled={sendingCustom || Boolean(sendingPrompt)}
-                  className="field min-h-12 w-full px-4 text-base font-normal outline-none placeholder:text-[var(--muted)] disabled:opacity-60"
-                />
+                <div className="field flex min-h-12 w-full items-center px-4">
+                  <input
+                    value={customReply}
+                    onChange={(event) => setCustomReply(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" && !event.shiftKey) {
+                        event.preventDefault();
+                        void sendText();
+                      }
+                    }}
+                    placeholder={canSendNew ? "Ask something…" : "Say something…"}
+                    maxLength={240}
+                    disabled={sendingCustom || Boolean(sendingPrompt)}
+                    className="field-control w-full text-base font-normal placeholder:text-[var(--muted)] disabled:opacity-60"
+                  />
+                </div>
                 <PrimaryButton
                   onClick={sendText}
                   disabled={sendingCustom || Boolean(sendingPrompt) || !customReply.trim()}
