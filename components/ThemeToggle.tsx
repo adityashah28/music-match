@@ -2,14 +2,9 @@
 
 import { useState, useSyncExternalStore, type MouseEvent } from "react";
 import { flushSync } from "react-dom";
+import { THEME_BAR_COLOR, THEME_KEY, type Theme } from "@/lib/theme";
 
-/** Saved choice; when unset the app is light (see the script in app/layout.tsx). */
-export const THEME_KEY = "resonate_theme";
-
-type Theme = "light" | "dark";
-
-/** Browser bar color per theme (matches --background). */
-const BAR_COLOR: Record<Theme, string> = { light: "#f4f5f7", dark: "#0e0f11" };
+export { THEME_KEY };
 
 /** The new theme grows out of the button as a circle (styles in app/globals.css). */
 const REVEAL_MS = 650;
@@ -21,7 +16,7 @@ let switching = false;
 
 function applyTheme(theme: Theme) {
   document.documentElement.dataset.theme = theme;
-  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", BAR_COLOR[theme]);
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", THEME_BAR_COLOR[theme]);
   listeners.forEach((notify) => notify());
 }
 

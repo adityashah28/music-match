@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Instrument_Serif, Khula } from "next/font/google";
 import { BottomNav } from "@/components/BottomNav";
 import { SiteHeader } from "@/components/SiteHeader";
+import { THEME_BAR_COLOR, THEME_KEY } from "@/lib/theme";
 import "./globals.css";
 
 const khula = Khula({
@@ -45,12 +46,12 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  // Light by default; ThemeToggle updates the bar color when someone switches to dark
-  themeColor: "#f4f5f7",
+  // No themeColor here: THEME_SCRIPT creates the one theme-color tag. A React-rendered tag set to dark
+  // before hydration gets re-added light next to it, so React must not own it.
   colorScheme: "light dark",
 };
 
-const THEME_SCRIPT = `try{var t=localStorage.getItem("resonate_theme");if(t!=="dark")t="light";document.documentElement.dataset.theme=t}catch(e){document.documentElement.dataset.theme="light"}`;
+const THEME_SCRIPT = `(function(){var t="light";try{if(localStorage.getItem(${JSON.stringify(THEME_KEY)})==="dark")t="dark"}catch(e){}document.documentElement.dataset.theme=t;var m=document.createElement("meta");m.name="theme-color";document.head.appendChild(m);m.content=${JSON.stringify(THEME_BAR_COLOR)}[t]})()`;
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
@@ -60,7 +61,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       suppressHydrationWarning
     >
       <head>
-        {/* Apply a saved dark-mode choice before first paint so it never flashes white.
+        {/* Apply a saved dark-mode choice (page and browser bar) before first paint so it never flashes white.
             Light is the default; dark only after someone picks it with the toggle. */}
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </head>
