@@ -9,6 +9,7 @@ import { OtpInput } from "@/components/OtpInput";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import {
   clearDraft,
+  clearUser,
   fetchJson,
   getDraft,
   getUserId,
@@ -91,6 +92,8 @@ export default function VerifyPage() {
         return;
       }
 
+      // New number: forget any old profile still saved in this browser (see completeGoogleSignIn)
+      clearUser();
       const draft = getDraft();
       setDraft({
         ...draft,

@@ -1270,6 +1270,20 @@ async function read<T>(run: (snapshot: DataSnapshot) => T): Promise<T> {
   return run(filled(await cachedSnapshot()));
 }
 
+/**
+ * Like read, for requests about one user. The cached snapshot can predate that user's signup
+ * (made seconds ago, maybe on another server instance); then load fresh instead of "not found".
+ */
+async function readFor<T>(userId: string, run: (snapshot: DataSnapshot) => T): Promise<T> {
+  let snapshot = filled(await cachedSnapshot());
+  if (!snapshot.users.some((user) => user.id === userId)) {
+    const data = await repo().load();
+    globalStore.__resonateSnapshot = { at: Date.now(), data };
+    snapshot = filled(data);
+  }
+  return run(snapshot);
+}
+
 export async function createUser(body: CreateUserBody): Promise<CreatedUser> {
   try {
     return await edit(async (snapshot) => {
@@ -1363,7 +1377,7 @@ export async function updateUser(id: string, body: UpdateUserBody): Promise<User
 
 export async function getUser(id: string): Promise<UserProfile | null> {
   try {
-    return await read((snapshot) => profileOf(snapshot, id));
+    return await readFor(id, (snapshot) => profileOf(snapshot, id));
   } catch (error) {
     throw wrap(error);
   }
@@ -1371,7 +1385,7 @@ export async function getUser(id: string): Promise<UserProfile | null> {
 
 export async function getMatches(userId: string): Promise<MatchesResponse | null> {
   try {
-    return await read((snapshot) => matchesOf(snapshot, userId));
+    return await readFor(userId, (snapshot) => matchesOf(snapshot, userId));
   } catch (error) {
     throw wrap(error);
   }
@@ -1650,7 +1664,7 @@ export async function sendIcebreaker(
 
 export async function listShows(userId: string, options: ShowListOptions = {}): Promise<ShowListResponse> {
   try {
-    return await read((snapshot) => listShowsOf(snapshot, userId, options));
+    return await readFor(userId, (snapshot) => listShowsOf(snapshot, userId, options));
   } catch (error) {
     throw wrap(error);
   }
@@ -1658,7 +1672,7 @@ export async function listShows(userId: string, options: ShowListOptions = {}): 
 
 export async function getShow(showId: string, userId: string): Promise<ShowDetail | null> {
   try {
-    return await read((snapshot) => showDetailOf(snapshot, showId, userId));
+    return await readFor(userId, (snapshot) => showDetailOf(snapshot, showId, userId));
   } catch (error) {
     throw wrap(error);
   }

@@ -815,6 +815,9 @@ export async function completeGoogleSignIn(): Promise<"existing" | "new"> {
   }
   const authProof = text(row?.authProof);
   if (!authProof) throw new Error("Google sign-in didn't finish");
+  // A new account: any profile still saved in this browser belongs to someone else (or no longer
+  // exists). Left in place, onboarding sees it, jumps to /matches, gets a 401 and logs out.
+  clearUser();
   const draft = getDraft();
   setDraft({ ...draft, authProof, name: draft.name || text(row?.name) || "" });
   return "new";

@@ -38,6 +38,8 @@ export default function ShowsPage() {
     return () => window.clearTimeout(id);
   }, [query]);
   const filteredShows = shows;
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   useEffect(() => {
     const id = getUserId();
@@ -53,7 +55,9 @@ export default function ShowsPage() {
     if (search) params.set("q", search);
     fetchJson(`/api/shows?${params}`)
       .then((data) => {
-        if (!cancelled) setShows(normalizeShows(data));
+        if (cancelled) return;
+        setShows(normalizeShows(data));
+        setHasMore(Boolean(data && typeof data === "object" && "hasMore" in data && data.hasMore));
       })
       .catch(() => {
         if (!cancelled) setError(true);
@@ -66,6 +70,25 @@ export default function ShowsPage() {
       cancelled = true;
     };
   }, [router, reload, search]);
+
+  /** Next page of the same search, added below the shows already on screen. */
+  async function showMore() {
+    const id = getUserId();
+    if (!id || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const params = new URLSearchParams({ userId: id, limit: String(SHOWS_PER_PAGE), offset: String(shows.length) });
+      if (search) params.set("q", search);
+      const data = await fetchJson(`/api/shows?${params}`);
+      const next = normalizeShows(data);
+      setShows((current) => [...current, ...next.filter((show) => !current.some((item) => item.id === show.id))]);
+      setHasMore(Boolean(data && typeof data === "object" && "hasMore" in data && data.hasMore));
+    } catch {
+      setRsvpError("Couldn’t load more shows. Try again.");
+    } finally {
+      setLoadingMore(false);
+    }
+  }
 
   async function setRsvp(show: ShowItem, next: RsvpStatus) {
     const id = getUserId();
@@ -133,7 +156,7 @@ export default function ShowsPage() {
           </GlassCard>
         ) : null}
 
-        {!loading && !error && shows.length === 0 ? (
+        {!loading && !error && shows.length === 0 && !search ? (
           <GlassCard className="mt-6 p-5">
             <p className="text-base leading-snug text-[var(--muted)]">
               No shows lined up for your artists yet.
@@ -144,7 +167,7 @@ export default function ShowsPage() {
           </GlassCard>
         ) : null}
 
-        {!loading && !error && shows.length > 0 ? (
+        {!loading && !error && (shows.length > 0 || search) ? (
           <div className="mt-6 flex flex-col gap-4">
             {rsvpError ? <p className="text-sm text-[var(--muted)]">{rsvpError}</p> : null}
             {filteredShows.length === 0 ? (
@@ -198,6 +221,13 @@ export default function ShowsPage() {
                 );
               })
             )}
+            {hasMore ? (
+              <div className="pt-2">
+                <PrimaryButton onClick={showMore} disabled={loadingMore}>
+                  {loadingMore ? "Loading…" : "Show more shows"}
+                </PrimaryButton>
+              </div>
+            ) : null}
           </div>
         ) : null}
       </main>
