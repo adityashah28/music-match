@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useRef, useState, type CSSProperties } from "react";
 import { usePathname } from "next/navigation";
 import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 import { clearDraft, getDraft, getUserId, isVerified, onboardingHref } from "@/lib/client";
@@ -32,12 +32,33 @@ type HeaderCta =
 export function SiteHeader() {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  /** Stays true through the close transition so the menu can fold away before unmounting. */
+  const [menuMounted, setMenuMounted] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
   const [hasUserId, setHasUserId] = useState(false);
   const [cta, setCta] = useState<HeaderCta>({ kind: "google" });
 
   useEffect(() => {
     setMenuOpen(false);
   }, [pathname]);
+
+  // Backstop for transitionend, which never fires if the card is display:none or the tab is hidden.
+  useEffect(() => {
+    if (menuOpen || !menuMounted) return;
+    const timer = setTimeout(() => setMenuMounted(false), 450);
+    return () => clearTimeout(timer);
+  }, [menuOpen, menuMounted]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      setMenuOpen(false);
+      menuButtonRef.current?.focus();
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [menuOpen]);
 
   useEffect(() => {
     const userId = getUserId();
@@ -158,13 +179,34 @@ export function SiteHeader() {
 
               {nav.length > 0 ? (
                 <button
+                  ref={menuButtonRef}
                   type="button"
-                  className="font-sans inline-flex min-h-10 min-w-10 cursor-pointer items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface)] px-4 text-center text-sm font-normal leading-none text-[var(--foreground)] transition duration-200 ease-out hover:bg-[var(--surface-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)] md:hidden"
+                  className="font-sans inline-flex min-h-10 min-w-10 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-[var(--border)] bg-[var(--surface)] px-4 text-center text-sm font-normal leading-none text-[var(--foreground)] transition duration-200 ease-out hover:bg-[var(--surface-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)] md:hidden"
                   aria-expanded={menuOpen}
                   aria-controls="site-mobile-menu"
-                  onClick={() => setMenuOpen((open) => !open)}
+                  onClick={() => {
+                    setMenuMounted(true);
+                    setMenuOpen((open) => !open);
+                  }}
                 >
-                  <span className="btn-label">{menuOpen ? "Close" : "Menu"}</span>
+                  <span className="grid">
+                    <span
+                      className="menu-toggle-label"
+                      data-active={!menuOpen}
+                      aria-hidden={menuOpen}
+                      style={{ "--menu-label-shift": "-120%" } as CSSProperties}
+                    >
+                      <span className="btn-label">Menu</span>
+                    </span>
+                    <span
+                      className="menu-toggle-label"
+                      data-active={menuOpen}
+                      aria-hidden={!menuOpen}
+                      style={{ "--menu-label-shift": "120%" } as CSSProperties}
+                    >
+                      <span className="btn-label">Close</span>
+                    </span>
+                  </span>
                 </button>
               ) : null}
             </div>
@@ -172,28 +214,44 @@ export function SiteHeader() {
         )}
       </div>
 
-      {!isLanding && !isOnboarding && menuOpen && nav.length > 0 ? (
+      {!isLanding && !isOnboarding && menuMounted && nav.length > 0 ? (
         <div
           id="site-mobile-menu"
-          className="pointer-events-auto mx-4 mb-3 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] p-3 md:hidden"
+          data-state={menuOpen ? "open" : "closed"}
+          inert={!menuOpen}
+          onTransitionEnd={(event) => {
+            if (event.target === event.currentTarget && event.propertyName === "opacity" && !menuOpen) {
+              setMenuMounted(false);
+            }
+          }}
+          className="menu-card pointer-events-auto mx-4 mb-3 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] p-3 md:hidden"
         >
           <nav aria-label="Mobile" className="flex flex-col gap-1">
-            {nav.map(({ href, label }) => {
+            {nav.map(({ href, label }, index) => {
               const active = isActive(href);
               return (
-                <Link
-                  key={href}
-                  href={href}
-                  aria-current={active ? "page" : undefined}
-                  className={`flex min-h-11 cursor-pointer items-center px-4 text-sm font-normal transition duration-200 ease-out hover:bg-[var(--surface-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)] ${
-                    active
-                      ? "text-[var(--foreground)]"
-                      : "text-[var(--muted)] hover:text-[var(--foreground)]"
-                  }`}
-                  onClick={() => setMenuOpen(false)}
-                >
-                  {label}
-                </Link>
+                <Fragment key={href}>
+                  {index > 0 ? (
+                    <span
+                      aria-hidden="true"
+                      className="menu-rule mx-4"
+                      style={{ "--i": index - 1 } as CSSProperties}
+                    />
+                  ) : null}
+                  <Link
+                    href={href}
+                    aria-current={active ? "page" : undefined}
+                    style={{ "--i": index } as CSSProperties}
+                    className={`menu-item flex min-h-11 cursor-pointer items-center rounded-xl px-4 text-sm font-normal hover:bg-[var(--surface-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)] ${
+                      active
+                        ? "text-[var(--foreground)]"
+                        : "text-[var(--muted)] hover:text-[var(--foreground)]"
+                    }`}
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    {label}
+                  </Link>
+                </Fragment>
               );
             })}
             {renderCta({ mobile: true })}

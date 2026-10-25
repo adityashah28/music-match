@@ -497,6 +497,123 @@ h3 {
   animation: setup-fill 1.8s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
+/*
+ * Mobile nav menu (SiteHeader). Transitions, not keyframes, so a mid-animation
+ * toggle reverses from where it is. @starting-style supplies the "from" frame on
+ * mount; data-state="closed" holds the exit timings until the card unmounts.
+ */
+.menu-card {
+  --menu-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  transform-origin: top right;
+  clip-path: inset(0 round var(--radius));
+  transition:
+    opacity 0.26s var(--menu-ease),
+    transform 0.38s var(--menu-ease),
+    clip-path 0.42s var(--menu-ease);
+}
+
+.menu-card[data-state="closed"] {
+  opacity: 0;
+  transform: translateY(-6px) scale(0.96);
+  clip-path: inset(0 0 100% 40% round var(--radius));
+  pointer-events: none;
+  transition-duration: 0.2s, 0.22s, 0.22s;
+  transition-delay: 0.04s;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.8, 0.4);
+}
+
+@starting-style {
+  .menu-card[data-state="open"] {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.96);
+    clip-path: inset(0 0 100% 40% round var(--radius));
+  }
+}
+
+.menu-item {
+  --menu-delay: calc(0.11s + var(--i, 0) * 0.055s);
+  transition:
+    opacity 0.3s var(--menu-ease) var(--menu-delay),
+    transform 0.4s var(--menu-ease) var(--menu-delay),
+    color 0.2s ease-out,
+    background-color 0.2s ease-out;
+}
+
+.menu-card[data-state="closed"] .menu-item {
+  opacity: 0;
+  transform: translateY(-4px);
+  transition-duration: 0.12s, 0.16s, 0.2s, 0.2s;
+  transition-delay: 0s;
+  transition-timing-function: ease-in;
+}
+
+@starting-style {
+  .menu-card[data-state="open"] .menu-item {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+.menu-rule {
+  height: 1px;
+  background: var(--border);
+  transform-origin: left center;
+  transition: transform 0.5s var(--menu-ease) calc(0.14s + var(--i, 0) * 0.055s);
+}
+
+.menu-card[data-state="closed"] .menu-rule {
+  transform: scaleX(0);
+  transition-duration: 0.14s;
+  transition-delay: 0s;
+}
+
+@starting-style {
+  .menu-card[data-state="open"] .menu-rule {
+    transform: scaleX(0);
+  }
+}
+
+/* Menu ⇄ Close: the outgoing word slides away as the other arrives. */
+.menu-toggle-label {
+  grid-area: 1 / 1;
+  transition:
+    opacity 0.2s ease-out,
+    transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.menu-toggle-label[data-active="false"] {
+  opacity: 0;
+  transform: translateY(var(--menu-label-shift));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menu-card,
+  .menu-card[data-state="closed"] {
+    transform: none;
+    clip-path: none;
+    transition: opacity 0.15s linear;
+  }
+
+  .menu-card .menu-item,
+  .menu-card[data-state="closed"] .menu-item {
+    opacity: 1;
+    transform: none;
+    transition: color 0.2s ease-out, background-color 0.2s ease-out;
+  }
+
+  .menu-card .menu-rule,
+  .menu-card[data-state="closed"] .menu-rule {
+    transform: none;
+    transition: none;
+  }
+
+  .menu-toggle-label,
+  .menu-toggle-label[data-active="false"] {
+    transform: none;
+    transition: opacity 0.15s linear;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .bg-layer,
   .chip-enter,
