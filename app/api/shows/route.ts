@@ -1,6 +1,8 @@
 import { requireUser } from "@/lib/auth";
 import { errorResponse } from "@/lib/errors";
-import { listShows } from "@/lib/store";
+import { after } from "next/server";
+import { importShowsNear, NEARBY_ENOUGH, shouldImportNear } from "@/lib/nearby";
+import { listShows, viewerLocation } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +32,16 @@ export async function GET(request: Request) {
     });
     if (!shows) {
       return Response.json({ error: "User not found" }, { status: 404 });
+    }
+
+    // Few shows near this viewer (anywhere outside the seeded Bay Area): fetch their area from
+    // Ticketmaster after responding; the page asks again while searchingNearby is true
+    if (shows.nearbyCount < NEARBY_ENOUGH) {
+      const origin = await viewerLocation(userId);
+      if (origin && shouldImportNear(origin)) {
+        after(() => importShowsNear(origin));
+        shows.searchingNearby = true;
+      }
     }
     return Response.json(shows);
   } catch (error) {

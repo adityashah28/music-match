@@ -253,6 +253,10 @@ export type ShowListResponse = {
   hasMore: boolean;
   /** Genres present in the search results (before the genre filter), most shows first: the filter's options. */
   genres: { id: string; label: string; count: number }[];
+  /** Upcoming shows within 100 km of the viewer, ignoring search and genre (0 if location unknown). */
+  nearbyCount: number;
+  /** True while the server is fetching shows around the viewer: ask again in a few seconds. */
+  searchingNearby: boolean;
 };
 
 export type ShowListOptions = {

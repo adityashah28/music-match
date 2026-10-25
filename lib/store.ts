@@ -351,7 +351,7 @@ function matchesOf(snapshot: DataSnapshot, userId: string): MatchesResponse | nu
 
 function listShowsOf(snapshot: DataSnapshot, userId: string, options: ShowListOptions = {}): ShowListResponse {
   const matches = matchesOf(snapshot, userId);
-  if (!matches) return { shows: [], total: 0, hasMore: false, genres: [] };
+  if (!matches) return { shows: [], total: 0, hasMore: false, genres: [], nearbyCount: 0, searchingNearby: false };
   const people = toPeople(snapshot);
   // Every upcoming show is listed; this only labels why a show is relevant to you, strongest first
   const reasons = new Map<string, ShowReason>();
@@ -426,7 +426,17 @@ function listShowsOf(snapshot: DataSnapshot, userId: string, options: ShowListOp
     distanceKm: km == null ? null : Math.round(km),
     genres: show.genres,
   }));
-  return { shows, total: ranked.length, hasMore: offset + shows.length < ranked.length, genres };
+  const nearbyCount = origin
+    ? snapshot.shows.filter((s) => (!s.startsAt || Date.parse(s.startsAt) >= cutoff) && (distanceTo(s) ?? Infinity) < SHOW_RING_KM).length
+    : 0;
+  return {
+    shows,
+    total: ranked.length,
+    hasMore: offset + shows.length < ranked.length,
+    genres,
+    nearbyCount,
+    searchingNearby: false,
+  };
 }
 
 /** Width of each distance ring when sorting shows (see listShowsOf). */
@@ -1218,6 +1228,11 @@ let queue: Promise<unknown> = Promise.resolve();
 const READ_CACHE_MS = 10_000;
 let inflight: Promise<DataSnapshot> | null = null;
 
+/** Make the next read load fresh, e.g. after shows were imported outside the store. */
+export function forgetCachedSnapshot() {
+  globalStore.__resonateSnapshot = undefined;
+}
+
 async function cachedSnapshot(): Promise<DataSnapshot> {
   const cached = globalStore.__resonateSnapshot;
   if (cached && Date.now() - cached.at < READ_CACHE_MS) return cached.data;
@@ -1675,6 +1690,18 @@ export async function sendIcebreaker(
       }
 
       return { icebreaker: icebreakerFor(userId, otherUserId, true, snapshot.icebreakers)! };
+    });
+  } catch (error) {
+    throw wrap(error);
+  }
+}
+
+/** Where the viewer is (their city's coordinates), or null if unknown. */
+export async function viewerLocation(userId: string): Promise<Coords | null> {
+  try {
+    return await readFor(userId, (snapshot) => {
+      const me = snapshot.users.find((user) => user.id === userId);
+      return me?.cityLat != null && me?.cityLng != null ? { lat: me.cityLat, lng: me.cityLng } : null;
     });
   } catch (error) {
     throw wrap(error);

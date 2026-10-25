@@ -41,11 +41,21 @@ export type ShowRow = {
  * Attach the correct Pacific offset for that date (PST or PDT).
  */
 export function pacific(local: string): string {
+  return localToZoned(local, "America/Los_Angeles");
+}
+
+/** Attach the UTC offset a local time has in `timeZone` (an IANA name like "America/New_York"). */
+export function localToZoned(local: string, timeZone = "America/Los_Angeles"): string {
   const base = local.slice(0, 19);
-  const offset = new Intl.DateTimeFormat("en-US", { timeZone: "America/Los_Angeles", timeZoneName: "longOffset" })
-    .formatToParts(new Date(`${base}Z`))
-    .find((p) => p.type === "timeZoneName")
-    ?.value.replace("GMT", "");
+  let offset: string | undefined;
+  try {
+    offset = new Intl.DateTimeFormat("en-US", { timeZone, timeZoneName: "longOffset" })
+      .formatToParts(new Date(`${base}Z`))
+      .find((p) => p.type === "timeZoneName")
+      ?.value.replace("GMT", "");
+  } catch {
+    offset = undefined; // unknown time zone name
+  }
   return `${base}${offset || "-08:00"}`;
 }
 
@@ -162,10 +172,12 @@ export async function saveShows(db: SupabaseClient, candidates: ShowRow[]): Prom
     row.genres = [...new Set([...(row.genres ?? []), ...fromScenes(scenesByName.get(row.normalized_artist_name))])];
   }
 
-  // Coordinates of each show's city, so the Shows list can sort by distance (one lookup per city)
-  for (const city of new Set(rows.map((r) => r.city).filter((c): c is string => Boolean(c)))) {
+  // Coordinates, so the Shows list can sort by distance. Ticketmaster rows come with the venue's;
+  // the rest get their city's (one lookup per city)
+  const needCoords = rows.filter((r) => r.lat == null || r.lng == null);
+  for (const city of new Set(needCoords.map((r) => r.city).filter((c): c is string => Boolean(c)))) {
     const coords = await geocodeCity(city);
-    for (const row of rows) {
+    for (const row of needCoords) {
       if (row.city === city) Object.assign(row, { lat: coords?.lat ?? null, lng: coords?.lng ?? null });
     }
   }

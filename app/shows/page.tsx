@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArtistImage } from "@/components/ArtistImage";
@@ -40,6 +40,9 @@ export default function ShowsPage() {
   const filteredShows = shows;
   const [hasMore, setHasMore] = useState(false);
   const [genre, setGenre] = useState("");
+  // The server fetches shows around the viewer when there are few nearby; ask again a few times
+  const [searchingNearby, setSearchingNearby] = useState(false);
+  const nearbyRetries = useRef(0);
   const [genreOptions, setGenreOptions] = useState<{ id: string; label: string; count: number }[]>([]);
   const [loadingMore, setLoadingMore] = useState(false);
   // Sticky once true: a search with zero matches shouldn't hide the bar that let you fix the search.
@@ -66,6 +69,14 @@ export default function ShowsPage() {
         if (next.length > 0) setEverHadShows(true);
         setHasMore(Boolean(data && typeof data === "object" && "hasMore" in data && data.hasMore));
         setGenreOptions(genreOptionsFrom(data));
+        const searching = Boolean(data && typeof data === "object" && "searchingNearby" in data && data.searchingNearby);
+        if (searching && nearbyRetries.current < 3) {
+          nearbyRetries.current += 1;
+          setSearchingNearby(true);
+          window.setTimeout(() => setReload((value) => value + 1), 6000);
+        } else {
+          setSearchingNearby(false);
+        }
       })
       .catch(() => {
         if (!cancelled) setError(true);
@@ -129,8 +140,13 @@ export default function ShowsPage() {
           Shows
         </h1>
         <p className="mt-3 text-base font-normal leading-snug text-[var(--muted)]">
-          Bay Area shows, nearest first.
+          Shows near you, soonest first.
         </p>
+        {searchingNearby ? (
+          <p className="mt-2 text-sm font-normal text-[var(--muted)]" role="status">
+            Finding shows near you…
+          </p>
+        ) : null}
 
         {!loading && !error && everHadShows ? (
           <label className="field mt-6 flex min-h-12 items-center gap-2 px-4">
