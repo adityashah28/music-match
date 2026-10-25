@@ -145,7 +145,7 @@ export default function IcebreakerPage() {
             className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 justify-self-start text-sm font-normal leading-none text-[var(--muted)] transition duration-200 ease-out hover:text-[var(--foreground)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]"
           />
           {match ? (
-            <h1 className="font-sans min-w-0 truncate text-center text-lg font-semibold leading-none text-[var(--foreground)]">
+            <h1 className="font-sans min-w-0 truncate text-center text-lg font-semibold leading-tight pb-0.5 text-[var(--foreground)]">
               <span className="btn-label">{match.handle}</span>
             </h1>
           ) : null}

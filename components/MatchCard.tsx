@@ -98,10 +98,10 @@ export function MatchCard({
               </div>
             )}
             <div className="min-w-0">
-              <p className="font-display truncate text-[2rem] font-normal leading-none tracking-tight text-[var(--foreground)]">
+              <p className="font-display truncate text-[2rem] font-normal leading-[1.15] pb-[0.1em] tracking-tight text-[var(--foreground)]">
                 {match.name || match.handle}
               </p>
-              <p className="mt-1 truncate text-sm font-normal text-[var(--muted)]">
+              <p className="mt-0 truncate text-sm font-normal text-[var(--muted)]">
                 {[match.handle !== match.name ? `@${match.handle}` : null, match.age != null ? String(match.age) : null, match.city]
                   .filter(Boolean)
                   .join(" · ")}
