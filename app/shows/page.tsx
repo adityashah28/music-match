@@ -40,6 +40,8 @@ export default function ShowsPage() {
   const filteredShows = shows;
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  // Sticky once true: a search with zero matches shouldn't hide the bar that let you fix the search.
+  const [everHadShows, setEverHadShows] = useState(false);
 
   useEffect(() => {
     const id = getUserId();
@@ -56,7 +58,9 @@ export default function ShowsPage() {
     fetchJson(`/api/shows?${params}`)
       .then((data) => {
         if (cancelled) return;
-        setShows(normalizeShows(data));
+        const next = normalizeShows(data);
+        setShows(next);
+        if (next.length > 0) setEverHadShows(true);
         setHasMore(Boolean(data && typeof data === "object" && "hasMore" in data && data.hasMore));
       })
       .catch(() => {
@@ -123,7 +127,7 @@ export default function ShowsPage() {
           Shows for your artists and matches.
         </p>
 
-        {!loading && !error && shows.length > 0 ? (
+        {!loading && !error && everHadShows ? (
           <label className="field mt-6 flex min-h-12 items-center gap-2 px-4">
             <SearchIcon />
             <span className="sr-only">Search shows</span>
