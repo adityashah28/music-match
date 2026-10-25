@@ -92,14 +92,14 @@
   content: "";
   position: absolute;
   inset: 0;
-  bottom: -0.25rem;
+  bottom: 0;
   z-index: -1;
   pointer-events: none;
   background: linear-gradient(
     to bottom,
-    rgba(var(--background-channels), 0.55) 0%,
-    rgba(var(--background-channels), 0.3) 65%,
-    rgba(var(--background-channels), 0.1) 90%,
+    rgba(var(--background-channels), 0.65) 0%,
+    rgba(var(--background-channels), 0.4) 55%,
+    rgba(var(--background-channels), 0.15) 80%,
     transparent 100%
   );
 }
