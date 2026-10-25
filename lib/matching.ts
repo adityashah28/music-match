@@ -8,6 +8,7 @@ import type {
   MatchPerson,
   MatchShow,
   MatchesResponse,
+  SkippedPerson,
   Socials,
   StoredIcebreaker,
   StoredShow,
@@ -398,10 +399,22 @@ export function buildMatches(
     };
   });
 
+  // Who you skipped, newest first, so the Skipped tab can list them for Unskip
+  const byId = new Map(people.map((person) => [person.id, person]));
+  const skippedPeople = skips
+    .filter((edge) => edge.userId === selfId)
+    .reverse()
+    .flatMap((edge): SkippedPerson[] => {
+      const person = byId.get(edge.otherUserId);
+      if (!person) return [];
+      return [{ userId: person.id, name: person.name || person.handle, handle: person.handle, avatarUrl: person.avatarUrl, city: person.city }];
+    });
+
   const nonDemo = people.filter((person) => !person.isDemo).length;
   return {
     early: nonDemo < EARLY_NON_DEMO_LIMIT,
     matches,
+    skipped: skippedPeople,
   };
 }
 

@@ -527,18 +527,37 @@ export function normalizeMatch(value: unknown): MatchPerson | null {
   };
 }
 
-export function normalizeMatches(value: unknown): { early: boolean; matches: MatchPerson[] } {
+/** Someone you skipped, for the Skipped tab. */
+export type SkippedPerson = { userId: string; name: string; handle: string; avatarUrl?: string; city: string };
+
+function normalizeSkipped(value: unknown): SkippedPerson | null {
+  const row = record(value);
+  const userId = text(row?.userId);
+  if (!row || !userId) return null;
+  return {
+    userId,
+    name: text(row.name) ?? text(row.handle) ?? "Someone",
+    handle: text(row.handle) ?? "",
+    avatarUrl: text(row.avatarUrl),
+    city: text(row.city) ?? "",
+  };
+}
+
+export function normalizeMatches(value: unknown): { early: boolean; matches: MatchPerson[]; skipped: SkippedPerson[] } {
   if (Array.isArray(value)) {
     return {
       early: false,
       matches: value.map(normalizeMatch).filter((match): match is MatchPerson => match !== null),
+      skipped: [],
     };
   }
   const row = record(value);
   const raw = row && Array.isArray(row.matches) ? row.matches : [];
+  const skipped = row && Array.isArray(row.skipped) ? row.skipped : [];
   return {
     early: row?.early === true,
     matches: raw.map(normalizeMatch).filter((match): match is MatchPerson => match !== null),
+    skipped: skipped.map(normalizeSkipped).filter((person): person is SkippedPerson => person !== null),
   };
 }
 

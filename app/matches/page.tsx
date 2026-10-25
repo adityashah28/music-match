@@ -21,14 +21,16 @@ import {
   sendSkip,
   type CrowdSnapshot,
   type MatchPerson,
+  type SkippedPerson,
 } from "@/lib/client";
 
-type Tab = "new" | "pending" | "matched";
+type Tab = "new" | "pending" | "matched" | "skipped";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "new", label: "New" },
   { id: "pending", label: "Pending" },
   { id: "matched", label: "Matched" },
+  { id: "skipped", label: "Skipped" },
 ];
 
 function tabOf(match: MatchPerson): Tab {
@@ -42,6 +44,8 @@ export default function MatchesPage() {
   const [error, setError] = useState(false);
   const [early, setEarly] = useState(false);
   const [matches, setMatches] = useState<MatchPerson[]>([]);
+  // Everyone you've skipped, so they can be brought back from the Skipped tab
+  const [skippedPeople, setSkippedPeople] = useState<SkippedPerson[]>([]);
   const [crowd, setCrowd] = useState<CrowdSnapshot | null>(null);
   const [needsSocial, setNeedsSocial] = useState(false);
   const [reload, setReload] = useState(0);
@@ -52,7 +56,7 @@ export default function MatchesPage() {
   // Where the last Interested / Undo sent someone, so the card vanishing from this tab isn't a mystery.
   const [moved, setMoved] = useState<{ name: string; to: Tab } | null>(null);
 
-  const counts = { new: 0, pending: 0, matched: 0 };
+  const counts = { new: 0, pending: 0, matched: 0, skipped: skippedPeople.length };
   for (const match of matches) counts[tabOf(match)] += 1;
   const shown = matches.filter((match) => tabOf(match) === tab);
 
@@ -95,9 +99,14 @@ export default function MatchesPage() {
     setMoved(null);
     setMatches((current) => current.filter((item) => item.userId !== match.userId));
     setSkipped({ match: { ...match, interested: false, mutual: false }, index });
+    setSkippedPeople((current) => [
+      { userId: match.userId, name: match.name || match.handle, handle: match.handle, avatarUrl: match.avatarUrl, city: match.city },
+      ...current.filter((person) => person.userId !== match.userId),
+    ]);
     try {
       await sendSkip(me, match.userId);
     } catch {
+      setSkippedPeople((current) => current.filter((person) => person.userId !== match.userId));
       setMatches((current) => {
         const next = [...current];
         next.splice(Math.max(0, index), 0, match);
@@ -124,8 +133,27 @@ export default function MatchesPage() {
         return next;
       });
       setSkipped(null);
+      setSkippedPeople((current) => current.filter((person) => person.userId !== match.userId));
     } catch {
       setActionError("Couldn't undo. Try again.");
+    } finally {
+      setBusyId("");
+    }
+  }
+
+  /** From the Skipped tab: bring someone back; reloading puts them in New with their full card. */
+  async function unskip(person: SkippedPerson) {
+    const me = getUserId();
+    if (!me || busyId) return;
+    setBusyId(person.userId);
+    setActionError("");
+    try {
+      await sendSkip(me, person.userId, false);
+      setSkippedPeople((current) => current.filter((item) => item.userId !== person.userId));
+      setMoved({ name: person.name || person.handle, to: "new" });
+      setReload((value) => value + 1);
+    } catch {
+      setActionError("Couldn't unskip. Try again.");
     } finally {
       setBusyId("");
     }
@@ -152,6 +180,7 @@ export default function MatchesPage() {
         const parsed = normalizeMatches(matchesData);
         setEarly(parsed.early);
         setMatches(parsed.matches);
+        setSkippedPeople(parsed.skipped);
         setCrowd(crowdData ? normalizeCrowd(crowdData) : null);
         if (userData) {
           const profile = normalizeProfile(userData, id);
@@ -204,7 +233,7 @@ export default function MatchesPage() {
             <div
               role="group"
               aria-label="Filter matches by status"
-              className="grid grid-cols-3 gap-1 rounded-full border border-[var(--border)] bg-[var(--surface)] p-1"
+              className="grid grid-cols-4 gap-1 rounded-full border border-[var(--border)] bg-[var(--surface)] p-1"
             >
               {TABS.map((option) => {
                 const selected = tab === option.id;
@@ -288,7 +317,9 @@ export default function MatchesPage() {
                     ? `It's mutual with ${moved.name}.`
                     : moved.to === "pending"
                       ? `${moved.name} is in Pending until they tap back.`
-                      : `Took back your interest in ${moved.name}.`
+                      : tab === "skipped"
+                        ? `${moved.name} is back in New.`
+                        : `Took back your interest in ${moved.name}.`
                 }
                 actionLabel={moved.to === "matched" ? "See match" : "View"}
                 onAction={() => showTab(moved.to)}
@@ -329,6 +360,41 @@ export default function MatchesPage() {
                 ) : null}
               </GlassCard>
             ) : null}
+
+            {tab === "skipped" && skippedPeople.length === 0 ? (
+              <GlassCard className="p-5">
+                <p className="text-base font-normal leading-snug text-[var(--muted)]">
+                  Nobody skipped. People you skip land here, and you can bring them back anytime.
+                </p>
+              </GlassCard>
+            ) : null}
+
+            {tab === "skipped"
+              ? skippedPeople.map((person) => (
+                  <GlassCard key={person.userId} className="flex items-center gap-3 p-3">
+                    {person.avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={person.avatarUrl} alt="" className="h-11 w-11 shrink-0 rounded-full object-cover" />
+                    ) : (
+                      <span
+                        aria-hidden
+                        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--surface-soft)] text-base font-semibold text-[var(--muted)]"
+                      >
+                        {(person.name || person.handle || "?").charAt(0).toUpperCase()}
+                      </span>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-base font-normal text-[var(--foreground)]">{person.name}</p>
+                      <p className="truncate text-sm text-[var(--muted)]">
+                        {[person.handle ? `@${person.handle}` : null, person.city].filter(Boolean).join(" · ")}
+                      </p>
+                    </div>
+                    <PrimaryButton size="compact" onClick={() => unskip(person)} disabled={busyId === person.userId}>
+                      Unskip
+                    </PrimaryButton>
+                  </GlassCard>
+                ))
+              : null}
 
             {shown.map((match) => (
               <MatchCard

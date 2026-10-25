@@ -195,9 +195,20 @@ export type MatchCard = {
   icebreaker: IcebreakerState | null;
 };
 
+/** Someone the viewer skipped: enough to list them with an Unskip button. */
+export type SkippedPerson = {
+  userId: string;
+  name: string;
+  handle: string;
+  avatarUrl: string | null;
+  city: string;
+};
+
 export type MatchesResponse = {
   early: boolean;
   matches: MatchCard[];
+  /** People you skipped (only ever your own), newest first. */
+  skipped: SkippedPerson[];
 };
 
 export type InterestResponse = {
