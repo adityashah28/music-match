@@ -110,6 +110,8 @@ function toPeople(snapshot: DataSnapshot): MatchPerson[] {
     handle: user.handle,
     avatarUrl: user.avatarUrl,
     city: user.city,
+    cityLat: user.cityLat,
+    cityLng: user.cityLng,
     age: user.age,
     ageMin: user.ageMin,
     ageMax: user.ageMax,

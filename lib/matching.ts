@@ -1,4 +1,5 @@
 import { agesCompatible } from "./age";
+import { distanceKm } from "./geocode";
 import { normalizeName } from "./normalize";
 import type {
   IcebreakerState,
@@ -21,6 +22,23 @@ const GENRE_BONUS_CAP = 3;
 const STRONG_RATIO = 0.62;
 const GOOD_RATIO = 0.3;
 const MAX_MATCHES = 30;
+/** People only match within this distance of each other (50 miles). */
+const MATCH_RADIUS_KM = 80.47;
+
+/**
+ * Close enough to match: within 50 miles by city coordinates, or, when either profile has
+ * no coordinates (older profiles), the same city name.
+ */
+export function withinMatchRadius(
+  a: Pick<MatchPerson, "city" | "cityLat" | "cityLng">,
+  b: Pick<MatchPerson, "city" | "cityLat" | "cityLng">,
+): boolean {
+  if (a.cityLat != null && a.cityLng != null && b.cityLat != null && b.cityLng != null) {
+    return distanceKm({ lat: a.cityLat, lng: a.cityLng }, { lat: b.cityLat, lng: b.cityLng }) <= MATCH_RADIUS_KM;
+  }
+  const city = (value: string) => value.trim().toLowerCase();
+  return Boolean(a.city) && city(a.city) === city(b.city);
+}
 const MAX_SHARED_SHOWS = 5;
 
 export function artistWeight(listedBy: number): number {
@@ -280,7 +298,9 @@ export function buildMatches(
       (person) =>
         person.id !== selfId &&
         !skipped.has(person.id) &&
-        agesCompatible(self.age, self.ageMin, self.ageMax, person.age, person.ageMin, person.ageMax),
+        agesCompatible(self.age, self.ageMin, self.ageMax, person.age, person.ageMin, person.ageMax) &&
+        // Within 50 miles, except matches that already happened (both tapped interested) stay
+        ((outgoing.has(person.id) && incoming.has(person.id)) || withinMatchRadius(self, person)),
     )
     .map((person) => {
       const pair = scorePair(self.artists, person.artists, weightOf, related);

@@ -304,6 +304,9 @@ export type MatchPerson = {
   handle: string;
   avatarUrl: string | null;
   city: string;
+  /** City coordinates, for the 50-mile match radius (null for older profiles). */
+  cityLat: number | null;
+  cityLng: number | null;
   age: number | null;
   ageMin: number | null;
   ageMax: number | null;
