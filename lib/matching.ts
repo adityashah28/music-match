@@ -22,11 +22,11 @@ const GENRE_BONUS_CAP = 3;
 const STRONG_RATIO = 0.62;
 const GOOD_RATIO = 0.3;
 const MAX_MATCHES = 30;
-/** People only match within this distance of each other (50 miles). */
-const MATCH_RADIUS_KM = 80.47;
+/** People only match within this distance of each other (75 miles). */
+const MATCH_RADIUS_KM = 120.7;
 
 /**
- * Close enough to match: within 50 miles by city coordinates, or, when either profile has
+ * Close enough to match: within 75 miles by city coordinates, or, when either profile has
  * no coordinates (older profiles), the same city name.
  */
 export function withinMatchRadius(
@@ -299,7 +299,7 @@ export function buildMatches(
         person.id !== selfId &&
         !skipped.has(person.id) &&
         agesCompatible(self.age, self.ageMin, self.ageMax, person.age, person.ageMin, person.ageMax) &&
-        // Within 50 miles, except matches that already happened (both tapped interested) stay
+        // Within 75 miles, except matches that already happened (both tapped interested) stay
         ((outgoing.has(person.id) && incoming.has(person.id)) || withinMatchRadius(self, person)),
     )
     .map((person) => {
