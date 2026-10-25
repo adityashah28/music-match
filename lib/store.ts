@@ -176,7 +176,13 @@ function optionalCoord(value: unknown): number | null {
   return value;
 }
 
-function showSummary(show: StoredShow, rsvp: RsvpStatus | null): ShowSummary {
+function showSummary(
+  show: StoredShow,
+  rsvp: RsvpStatus | null,
+  artistsByName: Map<string, StoredArtist>,
+): ShowSummary {
+  const key = show.normalizedArtistName || normalizeName(show.artistName);
+  const artist = artistsByName.get(key);
   return {
     id: show.id,
     artistName: show.artistName,
@@ -184,8 +190,15 @@ function showSummary(show: StoredShow, rsvp: RsvpStatus | null): ShowSummary {
     city: show.city,
     startsAt: show.startsAt,
     ticketUrl: show.ticketUrl,
+    // Prefer Deezer artist portraits (next/image + sizedPortraitUrl); Ticketmaster/show as fallback.
+    imageUrl: artist?.imageUrl ?? show.imageUrl,
+    color: artist?.dominantColorHex ?? null,
     rsvp,
   };
+}
+
+function artistsByNormalizedName(snapshot: DataSnapshot): Map<string, StoredArtist> {
+  return new Map(snapshot.artists.map((artist) => [artist.normalizedName, artist]));
 }
 
 async function ensureArtist(artists: StoredArtist[], input: ArtistInput): Promise<StoredArtist> {
@@ -352,6 +365,7 @@ function listShowsOf(snapshot: DataSnapshot, userId: string): ShowListResponse {
   const rsvps = new Map(
     snapshot.rsvps.filter((rsvp) => rsvp.userId === userId).map((rsvp) => [rsvp.showId, rsvp.status]),
   );
+  const artistsByName = artistsByNormalizedName(snapshot);
   // Keep shows that started in the last few hours (people are still there), drop older ones
   const cutoff = Date.now() - 6 * 60 * 60 * 1000;
   const shows = snapshot.shows
@@ -362,7 +376,7 @@ function listShowsOf(snapshot: DataSnapshot, userId: string): ShowListResponse {
       const right = b.startsAt ? Date.parse(b.startsAt) : Number.POSITIVE_INFINITY;
       return left - right;
     })
-    .map((show) => showSummary(show, rsvps.get(show.id) ?? null));
+    .map((show) => showSummary(show, rsvps.get(show.id) ?? null, artistsByName));
   return { shows };
 }
 
@@ -381,7 +395,7 @@ function showDetailOf(snapshot: DataSnapshot, showId: string, userId: string): S
   }
   const rsvp = snapshot.rsvps.find((row) => row.userId === userId && row.showId === showId)?.status ?? null;
   return {
-    ...showSummary(show, rsvp),
+    ...showSummary(show, rsvp, artistsByNormalizedName(snapshot)),
     crowd: {
       going: goingIds.size,
       taste: summarizeTaste(names),
@@ -575,6 +589,7 @@ async function absorbApify(snapshot: DataSnapshot, payload: unknown) {
       if (existing) {
         if (!existing.ticketUrl && ticketUrl) existing.ticketUrl = ticketUrl;
         if (!existing.city && city) existing.city = city;
+        if (!existing.imageUrl && imageUrl) existing.imageUrl = imageUrl;
       } else {
         snapshot.shows.push({
           id: crypto.randomUUID(),
@@ -584,6 +599,7 @@ async function absorbApify(snapshot: DataSnapshot, payload: unknown) {
           city,
           startsAt,
           ticketUrl,
+          imageUrl,
           source: "apify",
           updatedAt: new Date().toISOString(),
         });
@@ -715,6 +731,7 @@ function mapShow(row: Record<string, unknown>): StoredShow {
     city: text(row.city),
     startsAt: text(row.starts_at),
     ticketUrl: text(row.ticket_url),
+    imageUrl: text(row.image_url),
     source: text(row.source) ?? "supabase",
     updatedAt: text(row.updated_at) ?? new Date().toISOString(),
   };
@@ -768,6 +785,7 @@ function showRow(show: StoredShow) {
     city: show.city,
     starts_at: show.startsAt,
     ticket_url: show.ticketUrl,
+    image_url: show.imageUrl,
     source: show.source,
     updated_at: show.updatedAt,
   };
@@ -815,6 +833,7 @@ function showChanged(before: StoredShow, after: StoredShow): boolean {
     before.city !== after.city ||
     before.startsAt !== after.startsAt ||
     before.ticketUrl !== after.ticketUrl ||
+    before.imageUrl !== after.imageUrl ||
     before.source !== after.source
   );
 }

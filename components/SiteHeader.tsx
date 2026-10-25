@@ -9,7 +9,6 @@ import { clearDraft, getDraft, getUserId, isVerified, onboardingHref } from "@/l
 const APP_NAV = [
   { href: "/matches", label: "Matches" },
   { href: "/shows", label: "Shows" },
-  { href: "/crowd", label: "Crowd" },
   { href: "/me", label: "Profile" },
 ] as const;
 
@@ -153,7 +152,7 @@ export function SiteHeader() {
               {nav.length > 0 ? (
                 <button
                   type="button"
-                  className="font-sans inline-flex min-h-10 min-w-10 cursor-pointer items-center justify-center border border-[var(--border)] bg-[var(--surface)] px-3 text-center text-sm font-normal leading-none text-[var(--foreground)] transition duration-200 ease-out hover:bg-[var(--surface-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)] md:hidden"
+                  className="font-sans inline-flex min-h-10 min-w-10 cursor-pointer items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface)] px-4 text-center text-sm font-normal leading-none text-[var(--foreground)] transition duration-200 ease-out hover:bg-[var(--surface-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)] md:hidden"
                   aria-expanded={menuOpen}
                   aria-controls="site-mobile-menu"
                   onClick={() => setMenuOpen((open) => !open)}
@@ -169,7 +168,7 @@ export function SiteHeader() {
       {!isLanding && !isOnboarding && menuOpen && nav.length > 0 ? (
         <div
           id="site-mobile-menu"
-          className="pointer-events-auto mx-4 mb-3 border border-[var(--border)] bg-[var(--surface)] p-3 md:hidden"
+          className="pointer-events-auto mx-4 mb-3 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] p-3 md:hidden"
         >
           <nav aria-label="Mobile" className="flex flex-col gap-1">
             {nav.map(({ href, label }) => (

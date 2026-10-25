@@ -21,6 +21,12 @@ const nextConfig: NextConfig = {
         hostname: "e-cdns-images.dzcdn.net",
         pathname: "/images/**",
       },
+      // Ticketmaster Discovery event images (show-card fallback when no Deezer artist photo)
+      {
+        protocol: "https",
+        hostname: "**.ticketm.net",
+        pathname: "/**",
+      },
     ],
     // Portraits change rarely; cache optimized variants longer than the 4h default.
     minimumCacheTTL: 60 * 60 * 24 * 7,

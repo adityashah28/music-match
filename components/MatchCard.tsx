@@ -1,10 +1,34 @@
 import Link from "next/link";
-import { ArtistImage } from "@/components/ArtistImage";
 import { GlassCard } from "@/components/GlassCard";
 import { MatchActions } from "@/components/MatchActions";
 import { MatchWhy } from "@/components/MatchWhy";
 import type { MatchPerson } from "@/lib/client";
-import { photoFor } from "@/lib/portraits";
+import { portraitFor } from "@/lib/portraits";
+
+const FALLBACK_TONE = "#c8ced8";
+
+function hexTone(value?: string | null): string {
+  if (!value) return FALLBACK_TONE;
+  const hex = value.trim();
+  return /^#[0-9a-fA-F]{6}$/.test(hex) ? hex : FALLBACK_TONE;
+}
+
+function rgba(hex: string, alpha: number): string {
+  const n = Number.parseInt(hex.slice(1), 16);
+  const r = (n >> 16) & 255;
+  const g = (n >> 8) & 255;
+  const b = n & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function frostWash(hex: string): string {
+  return [
+    `radial-gradient(120% 90% at 10% 15%, ${rgba(hex, 0.55)} 0%, transparent 58%)`,
+    `radial-gradient(90% 70% at 92% 8%, rgba(255, 255, 255, 0.78) 0%, transparent 52%)`,
+    `radial-gradient(70% 60% at 70% 88%, ${rgba(hex, 0.28)} 0%, transparent 55%)`,
+    `linear-gradient(155deg, ${rgba(hex, 0.42)} 0%, ${rgba(hex, 0.68)} 46%, rgba(244, 245, 247, 0.92) 100%)`,
+  ].join(", ");
+}
 
 export function MatchCard({
   match,
@@ -20,7 +44,7 @@ export function MatchCard({
   onSkip: () => void;
 }) {
   const lead = match.sharedArtists[0];
-  const cover = photoFor(lead?.name, lead?.imageUrl);
+  const tone = hexTone(lead?.color ?? portraitFor(lead?.name)?.color);
 
   return (
     <GlassCard className="p-0">
@@ -28,18 +52,13 @@ export function MatchCard({
         href={href}
         className="block cursor-pointer rounded-t-[var(--radius)] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--foreground)]"
       >
-        <div className="relative h-40 bg-[var(--surface-soft)]">
-          {cover ? (
-            <ArtistImage
-              src={cover}
-              size={500}
-              fill
-              sizes="(max-width: 672px) 100vw, 672px"
-              alt=""
-              className="object-cover"
-            />
-          ) : null}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
+        <div className="relative h-40 overflow-hidden bg-[var(--surface-soft)]">
+          <div aria-hidden className="absolute inset-0" style={{ background: frostWash(tone) }} />
+          <div aria-hidden className="absolute inset-0 bg-white/30" />
+          <div
+            aria-hidden
+            className="absolute inset-0 bg-gradient-to-t from-black/45 via-black/10 to-white/15"
+          />
           {match.isDemo ? (
             <span className="pill absolute right-3 top-3 border border-white/40 bg-black/30 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white">
               <span className="chip-label">demo</span>

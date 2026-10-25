@@ -21,7 +21,6 @@ const HIDDEN_SUFFIXES = ["/icebreaker"];
 const ITEMS = [
   { href: "/matches", label: "Matches", icon: MatchesIcon },
   { href: "/shows", label: "Shows", icon: ShowsIcon },
-  { href: "/crowd", label: "Crowd", icon: CrowdIcon },
   { href: "/me", label: "Profile", icon: ProfileIcon },
 ] as const;
 
@@ -39,7 +38,7 @@ export function BottomNav() {
     >
       <nav
         aria-label="Primary"
-        className="pointer-events-auto flex w-fit items-center gap-0.5 border border-[var(--border)] bg-[var(--surface)] px-1.5 py-1.5"
+        className="pointer-events-auto flex w-fit items-center gap-1 border border-[var(--border)] bg-[var(--surface)] px-2 py-2"
         style={{ borderRadius: 999 }}
       >
         {ITEMS.map(({ href, label, icon: Icon }) => {
@@ -49,14 +48,14 @@ export function BottomNav() {
               key={href}
               href={href}
               aria-current={active ? "page" : undefined}
-              className={`flex min-h-11 min-w-14 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-full px-3 text-[11px] font-normal transition duration-200 ease-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)] ${
+              className={`flex min-h-12 min-w-16 cursor-pointer flex-col items-center justify-center gap-1 rounded-full px-3.5 py-1.5 text-[11px] font-normal transition duration-200 ease-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)] ${
                 active
                   ? "bg-[var(--surface-soft)] text-[var(--foreground)]"
                   : "text-[var(--muted)] hover:bg-[var(--surface-soft)] hover:text-[var(--foreground)]"
               }`}
             >
               <Icon />
-              <span className="btn-label text-[11px]">{label}</span>
+              <span className="btn-label text-[11px] leading-none">{label}</span>
             </Link>
           );
         })}
@@ -98,19 +97,6 @@ function ShowsIcon() {
     <IconFrame>
       <path d="M4.5 8.2A1.4 1.4 0 0 1 5.9 6.8h12.2a1.4 1.4 0 0 1 1.4 1.4v1.1a1.7 1.7 0 0 0 0 3.3v1.1a1.4 1.4 0 0 1-1.4 1.4H5.9a1.4 1.4 0 0 1-1.4-1.4v-1.1a1.7 1.7 0 0 0 0-3.3V8.2Z" />
       <path d="M12 6.8v9.4" />
-    </IconFrame>
-  );
-}
-
-function CrowdIcon() {
-  return (
-    <IconFrame>
-      <circle cx="8" cy="9" r="2" />
-      <circle cx="16" cy="9" r="2" />
-      <circle cx="12" cy="8.2" r="2.1" />
-      <path d="M4.8 18.2v-.6a2.6 2.6 0 0 1 2.6-2.6h1.2" />
-      <path d="M19.2 18.2v-.6a2.6 2.6 0 0 0-2.6-2.6h-1.2" />
-      <path d="M8.2 18.4v-.7a2.5 2.5 0 0 1 2.5-2.5h2.6a2.5 2.5 0 0 1 2.5 2.5v.7" />
     </IconFrame>
   );
 }

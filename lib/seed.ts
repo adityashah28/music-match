@@ -598,6 +598,7 @@ export function createSeed(): DataSnapshot {
       city: show.city,
       startsAt: show.startsAt,
       ticketUrl: null,
+      imageUrl: null,
       source: "seed",
       updatedAt: SEEDED_AT,
     };

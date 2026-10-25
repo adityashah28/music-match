@@ -219,6 +219,10 @@ export type ShowSummary = {
   city: string | null;
   startsAt: string | null;
   ticketUrl: string | null;
+  /** Artist Deezer photo when known, else show/Ticketmaster image. */
+  imageUrl: string | null;
+  /** Artist dominant color when known (card fallback tone). */
+  color: string | null;
   rsvp: RsvpStatus | null;
 };
 
@@ -337,6 +341,7 @@ export type StoredShow = {
   city: string | null;
   startsAt: string | null;
   ticketUrl: string | null;
+  imageUrl: string | null;
   source: string;
   updatedAt: string;
 };

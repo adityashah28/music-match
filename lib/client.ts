@@ -100,6 +100,8 @@ export type ShowItem = {
   city: string;
   startsAt: string;
   ticketUrl?: string;
+  imageUrl?: string;
+  color?: string;
   rsvp: RsvpStatus | null;
   goingCount?: number;
   tasteSummary?: string;
@@ -542,6 +544,8 @@ export function normalizeShow(value: unknown): ShowItem | null {
     city: text(row.city) ?? "",
     startsAt: text(row.startsAt) ?? text(row.starts_at) ?? "",
     ticketUrl: text(row.ticketUrl) ?? text(row.ticket_url),
+    imageUrl: text(row.imageUrl) ?? text(row.image_url),
+    color: text(row.color) ?? text(row.dominantColorHex) ?? text(row.dominant_color_hex),
     rsvp,
     goingCount,
     tasteSummary:

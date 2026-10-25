@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ArtistChip } from "@/components/ArtistChip";
 import { GlassCard } from "@/components/GlassCard";
 import { GradientBackground } from "@/components/GradientBackground";
 import { MatchCard } from "@/components/MatchCard";
@@ -13,10 +14,12 @@ import {
   getDraft,
   getUserId,
   hasSocial,
+  normalizeCrowd,
   normalizeMatches,
   normalizeProfile,
   sendInterest,
   sendSkip,
+  type CrowdSnapshot,
   type MatchPerson,
 } from "@/lib/client";
 
@@ -26,6 +29,7 @@ export default function MatchesPage() {
   const [error, setError] = useState(false);
   const [early, setEarly] = useState(false);
   const [matches, setMatches] = useState<MatchPerson[]>([]);
+  const [crowd, setCrowd] = useState<CrowdSnapshot | null>(null);
   const [needsSocial, setNeedsSocial] = useState(false);
   const [reload, setReload] = useState(0);
   const [busyId, setBusyId] = useState("");
@@ -106,12 +110,14 @@ export default function MatchesPage() {
     Promise.all([
       fetchJson(`/api/users/${id}/matches`),
       fetchJson(`/api/users/${id}`).catch(() => null),
+      fetchJson("/api/crowd").catch(() => null),
     ])
-      .then(([matchesData, userData]) => {
+      .then(([matchesData, userData, crowdData]) => {
         if (cancelled) return;
         const parsed = normalizeMatches(matchesData);
         setEarly(parsed.early);
         setMatches(parsed.matches);
+        setCrowd(crowdData ? normalizeCrowd(crowdData) : null);
         if (userData) {
           const profile = normalizeProfile(userData, id);
           setNeedsSocial(profile ? !hasSocial(profile.socials) : false);
@@ -185,25 +191,18 @@ export default function MatchesPage() {
                 <p className="text-base font-normal leading-snug text-[var(--muted)]">
                   No matches yet. Check back as more people join.
                 </p>
-                <div className="mt-5">
-                  <PrimaryButton href="/crowd">See the crowd</PrimaryButton>
-                </div>
+                <CrowdPulse crowd={crowd} />
               </GlassCard>
             ) : null}
 
             {!early && matches.length === 0 ? (
               <GlassCard className="p-5">
                 <p className="text-base font-normal leading-snug text-[var(--muted)]">
-                  No matches yet. Add another artist, or check the crowd.
+                  No matches yet. Add another artist to widen your taste.
                 </p>
-                <div className="mt-5 flex flex-col gap-3">
+                <CrowdPulse crowd={crowd} />
+                <div className="mt-5">
                   <PrimaryButton href="/me">Edit artists</PrimaryButton>
-                  <Link
-                    href="/crowd"
-                    className="inline-flex min-h-11 cursor-pointer items-center justify-center text-base font-semibold text-[var(--foreground)] transition duration-200 ease-out hover:opacity-70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]"
-                  >
-                    See the crowd
-                  </Link>
                 </div>
               </GlassCard>
             ) : null}
@@ -240,5 +239,34 @@ export default function MatchesPage() {
         ) : null}
       </main>
     </GradientBackground>
+  );
+}
+
+function CrowdPulse({ crowd }: { crowd: CrowdSnapshot | null }) {
+  if (!crowd) return null;
+
+  const joinedLine =
+    crowd.joined === undefined
+      ? null
+      : crowd.joined === 1
+        ? "1 person has joined."
+        : `${crowd.joined} people have joined.`;
+
+  return (
+    <div className="mt-4">
+      {joinedLine ? <p className="text-base leading-snug text-[var(--muted)]">{joinedLine}</p> : null}
+      {crowd.topArtists.length > 0 ? (
+        <>
+          <p className="mt-3 text-sm font-normal leading-snug text-[var(--muted)]">
+            People here mostly listen to
+          </p>
+          <div className="mt-3 flex flex-wrap gap-3">
+            {crowd.topArtists.slice(0, 5).map((artist) => (
+              <ArtistChip key={artist.name} name={artist.name} imageUrl={artist.imageUrl} />
+            ))}
+          </div>
+        </>
+      ) : null}
+    </div>
   );
 }
