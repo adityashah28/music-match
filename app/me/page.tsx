@@ -9,6 +9,7 @@ import { ArtistChip, ArtistResult } from "@/components/ArtistChip";
 import { GlassCard } from "@/components/GlassCard";
 import { GradientBackground } from "@/components/GradientBackground";
 import { PrimaryButton } from "@/components/PrimaryButton";
+import { ShareSiteQr } from "@/components/ShareSiteQr";
 import { Skeleton } from "@/components/Skeleton";
 import { CityAutocomplete, type CityValue } from "@/components/CityAutocomplete";
 import {
@@ -328,6 +329,7 @@ export default function MePage() {
             <p className="mt-3 text-base font-normal leading-snug text-[var(--muted)]">
               Name, username, city, age, socials, and artists.
             </p>
+            <ShareSiteQr />
           </div>
           <div className="relative h-[72px] w-[72px] shrink-0">
             {avatarUrl ? (
