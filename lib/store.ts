@@ -2,6 +2,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { dominantColorFromImage } from "@/lib/color";
 import { distanceKm, type Coords } from "@/lib/geocode";
 import { GENRES, isGenre } from "@/lib/genres";
+import { ONBOARDING_ARTISTS, PROFILE_ARTISTS } from "@/lib/limits";
 import { isStoreError, StoreError } from "@/lib/errors";
 import { buildMatches, icebreakerFor, summarizeTaste } from "@/lib/matching";
 import { demoAutoReply, icebreakerPrompts, icebreakerText } from "@/lib/icebreakers";
@@ -76,7 +77,7 @@ function isStatus(value: string): value is RsvpStatus {
   return value === "going" || value === "maybe" || value === "not_going";
 }
 
-function takeInputs(inputs: ArtistInput[] | null | undefined): ArtistInput[] {
+function takeInputs(inputs: ArtistInput[] | null | undefined, max: number): ArtistInput[] {
   const seen = new Set<string>();
   const picked: ArtistInput[] = [];
   for (const input of inputs ?? []) {
@@ -95,7 +96,7 @@ function takeInputs(inputs: ArtistInput[] | null | undefined): ArtistInput[] {
       deezerId: input.deezerId ?? null,
       genres,
     });
-    if (picked.length === 5) break;
+    if (picked.length === max) break;
   }
   return picked;
 }
@@ -254,8 +255,8 @@ async function ensureArtist(artists: StoredArtist[], input: ArtistInput): Promis
   return artist;
 }
 
-async function replaceArtists(snapshot: DataSnapshot, userId: string, inputs: ArtistInput[]) {
-  const picked = takeInputs(inputs);
+async function replaceArtists(snapshot: DataSnapshot, userId: string, inputs: ArtistInput[], max: number) {
+  const picked = takeInputs(inputs, max);
   if (picked.length === 0) throw new StoreError(400, "Pick at least one artist");
   snapshot.links = snapshot.links.filter((link) => link.userId !== userId);
   for (let index = 0; index < picked.length; index += 1) {
@@ -304,7 +305,7 @@ async function insertUser(snapshot: DataSnapshot, body: CreateUserBody): Promise
     token: crypto.randomUUID(),
   };
   snapshot.users.push(user);
-  await replaceArtists(snapshot, user.id, body.artists);
+  await replaceArtists(snapshot, user.id, body.artists, ONBOARDING_ARTISTS);
   return user.id;
 }
 
@@ -329,7 +330,7 @@ async function patchUser(snapshot: DataSnapshot, id: string, body: UpdateUserBod
   if (body.instagram !== undefined) user.instagram = cleanSocial(body.instagram);
   if (body.tiktok !== undefined) user.tiktok = cleanSocial(body.tiktok);
   if (body.snapchat !== undefined) user.snapchat = cleanSocial(body.snapchat);
-  if (body.artists) await replaceArtists(snapshot, id, body.artists);
+  if (body.artists) await replaceArtists(snapshot, id, body.artists, PROFILE_ARTISTS);
 }
 
 function matchesOf(snapshot: DataSnapshot, userId: string): MatchesResponse | null {

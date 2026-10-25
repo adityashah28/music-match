@@ -71,7 +71,8 @@ create table if not exists artist_related (
 create table if not exists user_artists (
   user_id uuid not null references users (id) on delete cascade,
   artist_id uuid not null references artists (id) on delete cascade,
-  position integer not null check (position between 1 and 5),
+  -- Onboarding picks up to 5; the Profile tab can add more (migrations/20261026_more_artists.sql)
+  position integer not null check (position between 1 and 50),
   primary key (user_id, artist_id),
   unique (user_id, position)
 );

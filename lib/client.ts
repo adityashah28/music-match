@@ -1,3 +1,5 @@
+import { PROFILE_ARTISTS } from "./limits";
+
 const USER_KEY = "resonate_user_id";
 const TOKEN_KEY = "resonate_user_token";
 const DRAFT_KEY = "resonate_draft";
@@ -583,7 +585,7 @@ export function normalizeProfile(value: unknown, fallbackId: string): Profile | 
     ? row.artists
         .map(normalizeArtist)
         .filter((artist): artist is DraftArtist => artist !== null)
-        .slice(0, 5)
+        .slice(0, PROFILE_ARTISTS)
     : [];
   return {
     id: text(row.id) ?? fallbackId,

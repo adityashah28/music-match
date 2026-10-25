@@ -29,6 +29,7 @@ import {
   setUserId,
   type DraftArtist,
 } from "@/lib/client";
+import { PROFILE_ARTISTS } from "@/lib/limits";
 
 export default function MePage() {
   const router = useRouter();
@@ -163,8 +164,9 @@ export default function MePage() {
 
   function add(artist: DraftArtist) {
     if (artists.some((picked) => artistKey(picked) === artistKey(artist))) return;
-    if (artists.length >= 5) {
-      setNotice("Five is the cap. Remove one to swap.");
+    // Onboarding asks for 5; here people can keep adding, up to the profile limit
+    if (artists.length >= PROFILE_ARTISTS) {
+      setNotice(`${PROFILE_ARTISTS} artists is the most a profile can hold. Remove one to add another.`);
       return;
     }
     setNotice("");
@@ -415,7 +417,9 @@ export default function MePage() {
             <GlassCard className="p-5">
               <div className="flex items-center justify-between gap-3">
                 <h2 className="text-xl font-normal tracking-tight text-[var(--foreground)]">Artists</h2>
-                <p className="text-sm font-normal text-[var(--muted)]">{artists.length} of 5</p>
+                <p className="text-sm font-normal text-[var(--muted)]">
+                  {artists.length} {artists.length === 1 ? "artist" : "artists"}
+                </p>
               </div>
               <div className="mt-4 flex flex-wrap gap-3">
                 {artists.length === 0 ? (
