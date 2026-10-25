@@ -706,7 +706,10 @@ export function readInterest(value: unknown): {
   return { mutual: row.mutual === true, socials, match: normalizeMatch(row.match) };
 }
 
-/** Marks interest and returns the refreshed match (mutual, socials, suggested show). */
+/**
+ * Toggles your interest and returns the refreshed match (mutual, socials, suggested show).
+ * Sending it again for someone you're already interested in withdraws it.
+ */
 export async function sendInterest(me: string, otherId: string) {
   const data = await fetchJson(`/api/matches/${encodeURIComponent(otherId)}/interest`, {
     method: "POST",

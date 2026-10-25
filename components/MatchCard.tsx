@@ -4,6 +4,7 @@ import Link from "next/link";
 import { GlassCard } from "@/components/GlassCard";
 import { MatchActions } from "@/components/MatchActions";
 import { MatchWhy } from "@/components/MatchWhy";
+import { PrimaryButton } from "@/components/PrimaryButton";
 import type { MatchPerson } from "@/lib/client";
 import { portraitFor } from "@/lib/portraits";
 
@@ -51,12 +52,15 @@ export function MatchCard({
   busy,
   onInterested,
   onSkip,
+  onWithdraw,
 }: {
   match: MatchPerson;
   href: string;
   busy?: boolean;
   onInterested: () => void;
   onSkip: () => void;
+  /** Takes back your interest while it's still one-sided. */
+  onWithdraw?: () => void;
 }) {
   const lead = match.sharedArtists[0];
   const tone = hexTone(lead?.color ?? portraitFor(lead?.name)?.color);
@@ -120,15 +124,78 @@ export function MatchCard({
         </div>
       </Link>
       <div className="px-4 pb-4 pt-4">
-        <MatchActions
-          interested={match.interested}
-          mutual={match.mutual}
-          busy={busy}
-          onInterested={onInterested}
-          onSkip={onSkip}
-          mutualHref={href}
-        />
+        {match.mutual ? (
+          <MatchedFooter match={match} href={href} />
+        ) : match.interested ? (
+          <PendingFooter busy={busy} onWithdraw={onWithdraw} />
+        ) : (
+          <MatchActions
+            interested={match.interested}
+            mutual={match.mutual}
+            busy={busy}
+            onInterested={onInterested}
+            onSkip={onSkip}
+          />
+        )}
       </div>
     </GlassCard>
+  );
+}
+
+const secondaryCompactClass =
+  "font-sans inline-flex min-h-10 shrink-0 cursor-pointer items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface)] px-5 text-center text-sm font-normal leading-none text-[var(--foreground)] transition duration-200 ease-out hover:border-[var(--foreground)] hover:bg-[var(--surface-soft)] active:scale-[0.99] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)] disabled:pointer-events-none disabled:opacity-40";
+
+function StatusLine({ filled, title, detail }: { filled: boolean; title: string; detail: string }) {
+  return (
+    <div className="min-w-0">
+      <p className="flex items-center gap-2 text-base font-semibold leading-snug text-[var(--foreground)]">
+        <span
+          aria-hidden
+          className={`h-2 w-2 shrink-0 rounded-full ${
+            filled ? "bg-[var(--foreground)]" : "border border-[var(--muted)]"
+          }`}
+        />
+        {title}
+      </p>
+      <p className="mt-0.5 text-sm font-normal leading-snug text-[var(--muted)]">{detail}</p>
+    </div>
+  );
+}
+
+function PendingFooter({ busy, onWithdraw }: { busy?: boolean; onWithdraw?: () => void }) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <StatusLine filled={false} title="Waiting on them" detail="You'll match if they tap interested too." />
+      {onWithdraw ? (
+        <button type="button" onClick={onWithdraw} disabled={busy} className={secondaryCompactClass}>
+          <span className="btn-label">{busy ? "Undoing…" : "Undo"}</span>
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+function MatchedFooter({ match, href }: { match: MatchPerson; href: string }) {
+  const rounds = match.icebreaker?.rounds ?? [];
+  const latest = rounds[rounds.length - 1];
+  const waitingOnYou = Boolean(latest && !latest.reply && !latest.promptFromMe);
+  const detail = match.socialsUnlocked
+    ? "Socials are unlocked."
+    : match.youShared
+      ? "You shared your socials. Theirs open when they share back."
+      : "Share your socials or send an icebreaker.";
+
+  return (
+    <div>
+      <StatusLine filled title="It's mutual" detail={detail} />
+      <div className="mt-3 flex flex-wrap gap-2">
+        <PrimaryButton size="compact" href={`${href}/icebreaker`}>
+          {waitingOnYou ? "Reply" : rounds.length > 0 ? "Open chat" : "Start chatting"}
+        </PrimaryButton>
+        <Link href={href} className={secondaryCompactClass}>
+          <span className="btn-label">{match.socialsUnlocked ? "See socials" : "Share socials"}</span>
+        </Link>
+      </div>
+    </div>
   );
 }

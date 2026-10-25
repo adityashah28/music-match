@@ -8,19 +8,14 @@ export function MatchActions({
   busy,
   onInterested,
   onSkip,
-  mutualHref,
 }: {
   interested: boolean;
   mutual: boolean;
   busy?: boolean;
   onInterested: () => void;
   onSkip: () => void;
-  /** Where the mutual state lives. Omit to render nothing once mutual. */
-  mutualHref?: string;
 }) {
-  if (mutual) {
-    return mutualHref ? <PrimaryButton href={mutualHref}>It&apos;s mutual — open</PrimaryButton> : null;
-  }
+  if (mutual) return null;
 
   return (
     <div className="grid grid-cols-2 gap-3">
