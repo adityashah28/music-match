@@ -1,6 +1,7 @@
 "use client";
 
 import { useSyncExternalStore, type MouseEvent } from "react";
+import { flushSync } from "react-dom";
 import { THEME_BAR_COLOR, THEME_KEY, type Theme } from "@/lib/theme";
 
 export { THEME_KEY };
@@ -9,17 +10,20 @@ export { THEME_KEY };
 const REVEAL_MS = 600;
 const REVEAL_STEPS = 30;
 
+// Toggles notify these directly so a flushSync re-render picks up the new icon in the same frame
+const listeners = new Set<() => void>();
 let switching = false;
 
 function applyTheme(theme: Theme) {
   document.documentElement.dataset.theme = theme;
   document.querySelector('meta[name="theme-color"]')?.setAttribute("content", THEME_BAR_COLOR[theme]);
+  listeners.forEach((notify) => notify());
 }
 
 /**
- * Circle radii for the reveal, paced by how much of the screen is covered rather than by radius.
- * Easing the radius directly hides the first ~100ms under the button and spends the last ~250ms
- * on a sliver in the far corner, which reads as a stall.
+ * Circle radii paced by screen coverage (not raw radius), so the wave doesn't stall under the
+ * button or crawl the far corner. Origin is % of the viewport — px origins mis-align on desktop
+ * when the view-transition snapshot box doesn't match CSS pixels (reads as top-center).
  */
 function revealFrames(x: number, y: number, width: number, height: number): string[] {
   const cols = 48;
@@ -32,13 +36,15 @@ function revealFrames(x: number, y: number, width: number, height: number): stri
   }
   distances.sort((a, b) => a - b);
   const farthest = Math.hypot(Math.max(x, width - x), Math.max(y, height - y));
+  const xPct = (x / width) * 100;
+  const yPct = (y / height) * 100;
   const frames: string[] = [];
   for (let step = 0; step <= REVEAL_STEPS; step++) {
     const covered = 0.5 - 0.5 * Math.cos((Math.PI * step) / REVEAL_STEPS);
     const at = covered * (distances.length - 1);
     const low = distances[Math.floor(at)];
     const radius = step === REVEAL_STEPS ? farthest : low + (distances[Math.ceil(at)] - low) * (at - Math.floor(at));
-    frames.push(`circle(${radius.toFixed(1)}px at ${x}px ${y}px)`);
+    frames.push(`circle(${radius.toFixed(1)}px at ${xPct.toFixed(3)}% ${yPct.toFixed(3)}%)`);
   }
   return frames;
 }
@@ -47,10 +53,34 @@ function revealFrames(x: number, y: number, width: number, height: number): stri
 function subscribe(onChange: () => void) {
   const observer = new MutationObserver(onChange);
   observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
-  return () => observer.disconnect();
+  listeners.add(onChange);
+  return () => {
+    observer.disconnect();
+    listeners.delete(onChange);
+  };
 }
 const current = (): Theme => (document.documentElement.dataset.theme === "dark" ? "dark" : "light");
 const onServer = (): Theme | null => null;
+
+/** Origin = the clicked toggle's center (pointer only if it lands inside that same button). */
+function revealOrigin(event: MouseEvent<HTMLButtonElement>): { x: number; y: number } {
+  const rect = event.currentTarget.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+
+  if (event.detail > 0) {
+    const { clientX: px, clientY: py } = event;
+    const inside =
+      Number.isFinite(px) &&
+      Number.isFinite(py) &&
+      px >= rect.left &&
+      px <= rect.right &&
+      py >= rect.top &&
+      py <= rect.bottom;
+    if (inside) return { x: px, y: py };
+  }
+  return { x: cx, y: cy };
+}
 
 /** Round header button that switches light/dark and remembers the choice on this device. */
 export function ThemeToggle() {
@@ -66,11 +96,11 @@ export function ThemeToggle() {
     }
 
     const root = document.documentElement;
-    // Only attribute writes, so the new snapshot is ready right away; React catches up through subscribe.
-    // data-theme-switching pauses color transitions (they'd trail the new theme) and spins the new icon in.
     const update = () => {
       root.dataset.themeSwitching = "";
-      applyTheme(next);
+      flushSync(() => {
+        applyTheme(next);
+      });
     };
     const done = () => {
       delete root.dataset.themeSwitching;
@@ -80,18 +110,17 @@ export function ThemeToggle() {
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (typeof document.startViewTransition !== "function" || reduceMotion) {
       update();
-      // Styles must settle with transitions off before they're switched back on
       void root.offsetHeight;
       done();
       return;
     }
 
-    // From the pointer when clicked, from the button's center when pressed with the keyboard
-    const rect = event.currentTarget.getBoundingClientRect();
-    const fromPointer = event.detail > 0 && (event.clientX !== 0 || event.clientY !== 0);
-    const x = fromPointer ? event.clientX : rect.left + rect.width / 2;
-    const y = fromPointer ? event.clientY : rect.top + rect.height / 2;
-    const frames = revealFrames(x, y, window.innerWidth, window.innerHeight);
+    const { x, y } = revealOrigin(event);
+    const width = window.visualViewport?.width ?? window.innerWidth;
+    const height = window.visualViewport?.height ?? window.innerHeight;
+    const ox = (window.visualViewport?.offsetLeft ?? 0) + x;
+    const oy = (window.visualViewport?.offsetTop ?? 0) + y;
+    const frames = revealFrames(ox, oy, width, height);
 
     switching = true;
     const transition = document.startViewTransition(update);

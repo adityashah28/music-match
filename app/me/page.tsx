@@ -319,62 +319,63 @@ export default function MePage() {
   return (
     <GradientBackground>
       <main className="screen screen-nav flex min-h-dvh flex-col">
-        {/* Google or uploaded profile picture; initials for profiles without one */}
-        <div className="relative mb-4 h-[72px] w-[72px] shrink-0">
-          {avatarUrl ? (
-            // A freshly chosen file previews as a blob: URL before the upload finishes;
-            // next/image doesn't optimize those, so fall back to a plain <img> for it.
-            avatarUrl.startsWith("blob:") || avatarUrl.startsWith("data:") ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={avatarUrl}
-                alt=""
-                className="h-[72px] w-[72px] rounded-full border border-[var(--border)] object-cover"
-              />
-            ) : (
-              <Image
-                src={avatarUrl}
-                alt=""
-                width={72}
-                height={72}
-                className="h-[72px] w-[72px] rounded-full border border-[var(--border)] object-cover"
-              />
-            )
-          ) : !loading ? (
-            <div
-              aria-hidden
-              className="flex h-[72px] w-[72px] items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface-soft)] text-2xl font-semibold text-[var(--muted)]"
-            >
-              {(name || handle || "?").trim().charAt(0).toUpperCase()}
-            </div>
-          ) : null}
-          {!loading ? (
-            <label
-              className={`absolute -bottom-1 -right-1 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] transition duration-200 ease-out hover:bg-[var(--surface-soft)] ${avatarUploading ? "pointer-events-none opacity-60" : ""}`}
-              title="Change photo"
-            >
-              <span className="sr-only">Change profile photo</span>
-              <EditPhotoIcon />
-              <input
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                className="sr-only"
-                disabled={avatarUploading}
-                onChange={handlePhotoChange}
-              />
-            </label>
-          ) : null}
+        {/* Title left, photo right; initials when there's no Google/uploaded image */}
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0 flex-1 pt-1">
+            <h1 className="font-display text-[40px] font-normal leading-[1.02] tracking-tight text-[var(--foreground)]">
+              Profile
+            </h1>
+            <p className="mt-3 text-base font-normal leading-snug text-[var(--muted)]">
+              Name, username, city, age, socials, and artists.
+            </p>
+          </div>
+          <div className="relative h-[72px] w-[72px] shrink-0">
+            {avatarUrl ? (
+              // A freshly chosen file previews as a blob: URL before the upload finishes;
+              // next/image doesn't optimize those, so fall back to a plain <img> for it.
+              avatarUrl.startsWith("blob:") || avatarUrl.startsWith("data:") ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={avatarUrl}
+                  alt=""
+                  className="h-[72px] w-[72px] rounded-full border border-[var(--border)] object-cover"
+                />
+              ) : (
+                <Image
+                  src={avatarUrl}
+                  alt=""
+                  width={72}
+                  height={72}
+                  className="h-[72px] w-[72px] rounded-full border border-[var(--border)] object-cover"
+                />
+              )
+            ) : !loading ? (
+              <div
+                aria-hidden
+                className="flex h-[72px] w-[72px] items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface-soft)] text-2xl font-semibold text-[var(--muted)]"
+              >
+                {(name || handle || "?").trim().charAt(0).toUpperCase()}
+              </div>
+            ) : null}
+            {!loading ? (
+              <label
+                className={`absolute -bottom-1 -right-1 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] transition duration-200 ease-out hover:bg-[var(--surface-soft)] ${avatarUploading ? "pointer-events-none opacity-60" : ""}`}
+                title="Change photo"
+              >
+                <span className="sr-only">Change profile photo</span>
+                <EditPhotoIcon />
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="sr-only"
+                  disabled={avatarUploading}
+                  onChange={handlePhotoChange}
+                />
+              </label>
+            ) : null}
+          </div>
         </div>
-        {avatarError ? <p className="mb-3 text-sm text-[var(--muted)]">{avatarError}</p> : null}
-        <p className="text-sm font-normal uppercase tracking-[0.18em] text-[var(--muted)]">
-          {handle || "Your profile"}
-        </p>
-        <h1 className="mt-2 font-display text-[40px] font-normal leading-[1.02] tracking-tight text-[var(--foreground)]">
-          Profile
-        </h1>
-        <p className="mt-3 text-base font-normal leading-snug text-[var(--muted)]">
-          Name, username, city, age, socials, and artists.
-        </p>
+        {avatarError ? <p className="mt-3 text-sm text-[var(--muted)]">{avatarError}</p> : null}
 
         {loading ? (
           <div className="mt-6 flex flex-col gap-3" aria-busy="true">
@@ -577,7 +578,7 @@ export default function MePage() {
             </PrimaryButton>
             <a
               href="/logout"
-              className="font-sans inline-flex min-h-11 w-full cursor-pointer items-center justify-center text-center text-base font-normal leading-none text-[var(--muted)] transition duration-200 ease-out hover:text-[var(--foreground)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]"
+              className="font-sans inline-flex min-h-11 w-full cursor-pointer items-center justify-center text-center text-base font-normal leading-none text-[#d64545] transition duration-200 ease-out hover:text-[#c23030] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]"
             >
               <span className="btn-label">Sign out</span>
             </a>

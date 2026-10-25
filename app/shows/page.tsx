@@ -141,7 +141,7 @@ export default function ShowsPage() {
           Shows
         </h1>
         <p className="mt-3 text-base font-normal leading-snug text-[var(--muted)]">
-          Shows near you, soonest first.
+          Add your upcoming or past shows.
         </p>
         {searchingNearby ? (
           <p className="mt-2 text-sm font-normal text-[var(--muted)]" role="status">

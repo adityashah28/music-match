@@ -85,13 +85,14 @@
 
 /*
  * Theme switch (ThemeToggle): the new theme grows out of the button as a circle clipped onto
- * ::view-transition-new(root), laid over a still snapshot of the old theme. No crossfade, and none
- * of the default 250ms pseudo animations, so the circle is the only motion.
+ * ::view-transition-new(root) via WAAPI (ThemeToggle.tsx). Mute every UA view-transition
+ * animation — the default group morph on wide desktop windows fights the clip-path and reads
+ * as a top-center expand instead of growing from the toggle.
  */
 ::view-transition-group(root),
 ::view-transition-old(root),
 ::view-transition-new(root) {
-  animation: none;
+  animation: none !important;
   mix-blend-mode: normal;
 }
 ::view-transition-old(root) {
@@ -340,6 +341,16 @@ h3 {
     radial-gradient(40% 35% at 90% 20%, var(--wash-2) 0%, transparent 65%),
     radial-gradient(45% 40% at 8% 80%, var(--wash-3) 0%, transparent 60%),
     var(--background);
+}
+
+/*
+ * During the theme circle reveal, drop the wash. The top-center glow (50% 0%) is so strong
+ * in light mode that on wide desktop windows it reads as the wave's origin instead of the
+ * toggle. Flat --background lets the clip-path from the button show clearly; wash returns
+ * when data-theme-switching is cleared.
+ */
+:root[data-theme-switching] .page-wash {
+  background: var(--background);
 }
 
 @keyframes bg-fade-in {

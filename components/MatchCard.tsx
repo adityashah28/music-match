@@ -1,3 +1,5 @@
+"use client";
+
 import type { CSSProperties } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -7,6 +9,7 @@ import { MatchWhy } from "@/components/MatchWhy";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import type { MatchPerson } from "@/lib/client";
 import { portraitFor } from "@/lib/portraits";
+import { useAvatarWash } from "@/lib/use-avatar-wash";
 
 const FALLBACK_TONE = "#c8ced8";
 
@@ -14,19 +17,6 @@ function hexTone(value?: string | null): string {
   if (!value) return FALLBACK_TONE;
   const hex = value.trim();
   return /^#[0-9a-fA-F]{6}$/.test(hex) ? hex : FALLBACK_TONE;
-}
-
-function rgba(hex: string, alpha: number): string {
-  const n = Number.parseInt(hex.slice(1), 16);
-  const r = (n >> 16) & 255;
-  const g = (n >> 8) & 255;
-  const b = n & 255;
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
-
-/** Soft art-print wash: a touch of the artist's tone fading into the card's own neutral fill. */
-function lightWash(hex: string): string {
-  return `linear-gradient(155deg, ${rgba(hex, 0.26)} 0%, ${rgba(hex, 0.08)} 45%, transparent 100%)`;
 }
 
 /** Darkens a tone for text use, scaling every channel equally so hue and saturation hold steady. */
@@ -63,7 +53,10 @@ export function MatchCard({
   onWithdraw?: () => void;
 }) {
   const lead = match.sharedArtists[0];
+  // Shared-artist tone still colors the match-strength label; header wash comes from the photo.
   const tone = hexTone(lead?.color ?? portraitFor(lead?.name)?.color);
+  const seed = match.name || match.handle || match.userId;
+  const { gradient, chip } = useAvatarWash(match.avatarUrl, seed);
   // Percentage labels read as "not quite a match" — keep those neutral; only color-code a real label.
   const strengthColor = match.label.endsWith("%") ? null : "var(--tone-label)";
   // Both versions of the tone; globals.css .tone-scope picks the one for the current theme
@@ -76,15 +69,14 @@ export function MatchCard({
         className="block cursor-pointer rounded-t-[var(--radius)] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--foreground)]"
       >
         <div className="relative h-40 overflow-hidden bg-[var(--surface-soft)]">
-          <div aria-hidden className="absolute inset-0" style={{ background: lightWash(tone) }} />
+          <div aria-hidden className="absolute inset-0" style={{ background: gradient }} />
           {match.isDemo ? (
             <span className="pill absolute right-3 top-3 border border-white/40 bg-black/30 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white">
               <span className="chip-label">demo</span>
             </span>
           ) : null}
           <div className="absolute inset-x-4 bottom-3 flex items-center gap-2.5">
-            {/* Google profile picture; initials for phone-only and demo profiles.
-                Same circular-avatar-chip styling as SharedFaces in MatchWhy.tsx. */}
+            {/* Google / uploaded photo; initials chip uses the same seed tone as the wash fallback. */}
             {match.avatarUrl ? (
               <Image
                 src={match.avatarUrl}
@@ -96,7 +88,8 @@ export function MatchCard({
             ) : (
               <div
                 aria-hidden
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-[var(--surface)] bg-[var(--surface-soft)] text-sm font-semibold text-[var(--foreground)]"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-[var(--surface)] text-sm font-semibold text-white"
+                style={{ background: chip }}
               >
                 {(match.name || match.handle || "?").trim().charAt(0).toUpperCase()}
               </div>
