@@ -15,7 +15,6 @@ export default function LogoutPage() {
       try {
         clearUser();
         clearDraft();
-        sessionStorage.removeItem("resonate_dev_otp");
       } catch {
         /* ignore */
       }

@@ -20,11 +20,7 @@ export type Socials = {
 };
 
 export type Draft = {
-  phone: string;
-  phoneVerified: boolean;
-  /** From /api/auth/verify; signup sends it back to prove the number. Expires after about an hour. */
-  phoneProof: string;
-  /** From Google sign-in (/api/auth/google); signup sends it back instead of a phone proof. Expires after about an hour. */
+  /** From Google sign-in (/api/auth/google); signup sends it back to prove who you are. Expires after about an hour. */
   authProof: string;
   name: string;
   artists: DraftArtist[];
@@ -283,9 +279,6 @@ export function primarySocial(socials: Socials): { label: string; href: string }
 
 function blankDraft(): Draft {
   return {
-    phone: "",
-    phoneVerified: false,
-    phoneProof: "",
     authProof: "",
     name: "",
     artists: [],
@@ -325,9 +318,6 @@ export function getDraft(): Draft {
           .slice(0, 5)
       : [];
     return {
-      phone: typeof parsed.phone === "string" ? parsed.phone : "",
-      phoneVerified: parsed.phoneVerified === true,
-      phoneProof: typeof parsed.phoneProof === "string" ? parsed.phoneProof : "",
       authProof: typeof parsed.authProof === "string" ? parsed.authProof : "",
       name: typeof parsed.name === "string" ? parsed.name : "",
       artists,
@@ -365,14 +355,13 @@ export function clearDraft() {
   sessionStorage.removeItem(DRAFT_KEY);
 }
 
-/** Has this draft proven who it is, by Google sign-in or by an SMS code? Gate onboarding steps on this. */
+/** Has this draft signed in with Google? Gate onboarding steps on this. */
 export function isVerified(draft: Draft = getDraft()): boolean {
-  return Boolean(draft.authProof) || (draft.phoneVerified && Boolean(draft.phone));
+  return Boolean(draft.authProof);
 }
 
 /** Next unfinished onboarding step for a guest draft. */
 export function onboardingHref(draft: Draft = getDraft()): string {
-  // Google is primary; /phone and /verify still work if opened directly.
   if (!isVerified(draft)) return "/";
   if (!draft.name.trim() || !draft.handle.trim() || !draft.city.trim()) return "/about";
   if (draft.age == null) return "/age";
@@ -387,8 +376,6 @@ export function userPayload(draft: Draft) {
     snapchat: normalizeSocialHandle(draft.snapchat),
   };
   return {
-    phone: draft.phone.trim(),
-    phoneProof: draft.phoneProof,
     authProof: draft.authProof,
     name: draft.name.trim(),
     handle: draft.handle.trim(),
@@ -412,7 +399,7 @@ export async function fetchJson(input: string, init?: RequestInit): Promise<unkn
   const headers = new Headers(init?.headers);
   if (token && input.startsWith("/api/")) headers.set("Authorization", `Bearer ${token}`);
   const response = await fetch(input, { ...init, headers });
-  // Dead session only — never bounce unauthenticated login/OTP flows home on 401.
+  // Dead session only — never bounce unauthenticated sign-in flows home on 401.
   if (
     response.status === 401 &&
     typeof window !== "undefined" &&

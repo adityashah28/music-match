@@ -18,8 +18,11 @@ sends the user back to `/`. Always call the API through `fetchJson` so the token
 - **Google:** link the button to the `/auth/google` page. It sends the person to Google, which
   returns them to `/auth/callback`; that page logs a known account in (goes to `/matches`) or
   keeps the Google proof in the onboarding draft and continues to `onboardingHref()`.
-- **Phone:** `/phone` and `/verify` screens. Codes come from Supabase Auth (Twilio Verify).
-- Gate onboarding screens on `isVerified(draft)` from `lib/client.ts`, which covers both.
+- **Phone:** onboarding has no phone screens (`/phone` and `/verify` redirect to `/about`). The
+  SMS endpoints below still work for API clients. Codes come from Supabase Auth (Twilio Verify).
+- Gate onboarding screens on `isVerified(draft)` from `lib/client.ts` (a Google sign-in).
+- Onboarding is About, Age, Artists, Socials. There's no saved step number: `onboardingHref()`
+  works out the next step from what the draft already has.
 - Google refuses to sign in inside in-app browsers (Discord, Instagram): ask people to open
   the link in Safari or Chrome.
 

@@ -1,9 +1,6 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { isInAppBrowser } from "@/lib/inAppBrowser";
 
-/** Kept for SMS-credit / internal testing — not linked from primary CTAs. */
-export const PHONE_AUTH_PATH = "/phone";
-
 const CALLBACK_PATH = "/auth/callback";
 
 let browserClient: SupabaseClient | null | undefined;

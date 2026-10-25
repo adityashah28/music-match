@@ -36,8 +36,8 @@ export async function POST(request: Request) {
       return Response.json({ error: "Invalid body" }, { status: 400 });
     }
 
-    // Identity must be proven, not just typed in: a Google sign-in (/api/auth/google)
-    // or an SMS code for the number (/api/auth/verify)
+    // Identity must be proven, not just typed in: a Google sign-in (/api/auth/google).
+    // The app's onboarding no longer asks for a number, but an SMS proof (/api/auth/verify) still works here.
     let phone: string | null = null;
     let google: GoogleIdentity | null = null;
     if (typeof json.authProof === "string" && json.authProof) {
@@ -45,6 +45,8 @@ export async function POST(request: Request) {
       if (!google) {
         throw new StoreError(400, "Your Google sign-in expired. Go back and sign in with Google again.");
       }
+    } else if (typeof json.phoneProof !== "string" || !json.phoneProof) {
+      throw new StoreError(400, "Sign in with Google to finish setting up.");
     } else {
       phone = await phoneFromProof(typeof json.phoneProof === "string" ? json.phoneProof : "");
       const claimed = normalizePhone(typeof json.phone === "string" ? json.phone : "");

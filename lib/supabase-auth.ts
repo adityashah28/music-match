@@ -18,7 +18,7 @@ function auth() {
     process.env.SUPABASE_ANON_KEY ||
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   )?.trim();
-  if (!url || !key) throw new StoreError(503, "Phone login isn't set up yet");
+  if (!url || !key) throw new StoreError(503, "Sign-in isn't set up yet");
   client ??= createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
   });

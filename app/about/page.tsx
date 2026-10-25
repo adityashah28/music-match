@@ -33,7 +33,6 @@ export default function AboutPage() {
     }
     const draft = getDraft();
     if (!isVerified(draft)) {
-      // Google is primary; phone OTP remains at /phone for testing.
       router.replace("/");
       return;
     }
@@ -101,7 +100,7 @@ export default function AboutPage() {
   return (
     <GradientBackground>
       <main className="screen screen-end flex min-h-dvh flex-col">
-        <BackLink href="/verify" />
+        <BackLink href="/" />
         <OnboardingProgress step="about" />
         <h1 className="font-display text-[40px] font-normal leading-[1.02] tracking-tight text-[var(--foreground)]">
           About you

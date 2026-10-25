@@ -14,8 +14,6 @@ const APP_NAV = [
 ] as const;
 
 const ONBOARDING_PATHS = new Set([
-  "/phone",
-  "/verify",
   "/about",
   "/age",
   "/pick",
@@ -79,13 +77,12 @@ export function SiteHeader() {
     // Backing out to home abandons guest onboarding; Google starts over.
     if (pathname === "/") {
       clearDraft();
-      sessionStorage.removeItem("resonate_dev_otp");
       setCta({ kind: "google" });
       return;
     }
 
     const draft = getDraft();
-    // Verified mid-draft (Google or SMS) can still resume.
+    // A Google-verified mid-draft can still resume.
     if (isVerified(draft)) {
       setCta({ kind: "link", href: onboardingHref(draft), label: "Continue" });
       return;

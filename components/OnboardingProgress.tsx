@@ -3,8 +3,6 @@
 import { useEffect, useRef } from "react";
 
 const STEPS = [
-  { id: "phone", label: "Number" },
-  { id: "verify", label: "Code" },
   { id: "about", label: "You" },
   { id: "age", label: "Age" },
   { id: "pick", label: "Artists" },

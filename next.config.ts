@@ -52,6 +52,14 @@ const nextConfig: NextConfig = {
     // Portraits change rarely; cache optimized variants longer than the 4h default.
     minimumCacheTTL: 60 * 60 * 24 * 7,
   },
+  // Onboarding used to start with phone number and code screens. Old links and open tabs land
+  // on the first step; About sends anyone who hasn't signed in with Google back home.
+  async redirects() {
+    return [
+      { source: "/phone", destination: "/about", permanent: false },
+      { source: "/verify", destination: "/about", permanent: false },
+    ];
+  },
   async headers() {
     return [
       {

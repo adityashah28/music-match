@@ -7,8 +7,7 @@ import { PrimaryButton } from "@/components/PrimaryButton";
 import { clearDraft, getUserId } from "@/lib/client";
 
 /**
- * Primary auth is Google. Phone OTP pages remain at /phone and /verify but
- * are not linked from landing — kept for SMS-credit / internal testing.
+ * Sign-up and sign-in are Google only.
  * Returning home abandons any mid-draft so Continue with Google starts clean.
  */
 export function LandingCta() {
@@ -29,10 +28,7 @@ export function LandingCta() {
     const userId = getUserId();
 
     // Leaving onboarding for home should not resume a later step.
-    if (!userId) {
-      clearDraft();
-      sessionStorage.removeItem("resonate_dev_otp");
-    }
+    if (!userId) clearDraft();
 
     setLoggedIn(Boolean(userId));
     setReady(true);

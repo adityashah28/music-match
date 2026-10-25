@@ -6,8 +6,6 @@ import type { ReactNode } from "react";
 
 const HIDDEN = new Set([
   "/",
-  "/phone",
-  "/verify",
   "/about",
   "/age",
   "/pick",
