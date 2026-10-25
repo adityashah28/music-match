@@ -784,8 +784,6 @@ export function formatWhen(value: string) {
   if (!value) return "Date TBA";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  // Ticketmaster lists shows whose time isn't announced yet at midnight: show just the date
-  if (date.getHours() === 0 && date.getMinutes() === 0) return formatDay(value);
   return new Intl.DateTimeFormat("en", {
     weekday: "short",
     month: "short",
