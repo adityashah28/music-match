@@ -42,13 +42,9 @@ export function SiteHeader() {
     const userId = getUserId();
     setHasUserId(Boolean(userId));
 
+    // Signed-in users already have Matches/Shows/Profile nav — no Continue CTA.
     if (userId) {
-      // Already inside a match chat — Continue → /matches is redundant noise.
-      if (pathname.endsWith("/icebreaker")) {
-        setCta(null);
-        return;
-      }
-      setCta({ kind: "link", href: "/matches", label: "Continue" });
+      setCta(null);
       return;
     }
 
