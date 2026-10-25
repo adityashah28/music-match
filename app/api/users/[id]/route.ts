@@ -1,6 +1,7 @@
 import { after } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { enrichArtists } from "@/lib/enrich";
+import { geocodeAnywhere } from "@/lib/geocode";
 import { errorResponse, readJson } from "@/lib/errors";
 import { getUser, updateUser } from "@/lib/store";
 import type { ArtistInput, UpdateUserBody } from "@/lib/types";
@@ -71,6 +72,11 @@ export async function PATCH(
     if (city !== undefined) body.city = city;
     if (cityLat !== undefined) body.cityLat = cityLat;
     if (cityLng !== undefined) body.cityLng = cityLng;
+    // A new city without coordinates: look them up, or matching's distance rule can't place it
+    if (typeof city === "string" && city.trim() && (cityLat == null || cityLng == null)) {
+      const coords = await geocodeAnywhere(city);
+      if (coords) Object.assign(body, { cityLat: coords.lat, cityLng: coords.lng });
+    }
     if (cityPlaceId !== undefined) body.cityPlaceId = cityPlaceId;
     if (age !== undefined) body.age = age;
     if (ageMin !== undefined) body.ageMin = ageMin;

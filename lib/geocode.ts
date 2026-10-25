@@ -54,3 +54,32 @@ export function distanceKm(a: Coords, b: Coords): number {
   const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng / 2) ** 2;
   return 6371 * 2 * Math.asin(Math.sqrt(h));
 }
+
+const anywhereCache = new Map<string, Coords>();
+
+/**
+ * A city anywhere in the world -> coordinates (towns and cities only, no state limit), for
+ * people's own cities: matching needs them for its distance rule. Cached per server process.
+ */
+export async function geocodeAnywhere(city: string): Promise<Coords | null> {
+  const key = city.trim().toLowerCase();
+  if (!key) return null;
+  const hit = anywhereCache.get(key);
+  if (hit) return hit;
+  const url = new URL("https://photon.komoot.io/api/");
+  url.searchParams.set("q", city);
+  url.searchParams.set("limit", "1");
+  for (const tag of ["place:city", "place:town", "place:village"]) url.searchParams.append("osm_tag", tag);
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(6000) });
+    if (!res.ok) return null;
+    const { features = [] } = (await res.json()) as { features?: Feature[] };
+    const [lng, lat] = features[0]?.geometry?.coordinates ?? [];
+    if (typeof lat !== "number" || typeof lng !== "number") return null;
+    const coords = { lat, lng };
+    anywhereCache.set(key, coords);
+    return coords;
+  } catch {
+    return null;
+  }
+}

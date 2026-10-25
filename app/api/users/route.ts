@@ -1,5 +1,6 @@
 import { after } from "next/server";
 import { enrichArtists } from "@/lib/enrich";
+import { geocodeAnywhere } from "@/lib/geocode";
 import { errorResponse, readJson, StoreError } from "@/lib/errors";
 import { googleFromProof, phoneFromProof, type GoogleIdentity } from "@/lib/supabase-auth";
 import { normalizePhone } from "@/lib/phone";
@@ -78,6 +79,11 @@ export async function POST(request: Request) {
       artists: Array.isArray(json.artists) ? (json.artists as ArtistInput[]) : [],
     };
 
+    // Matching's distance rule needs coordinates: look the city up if they're missing
+    if (body.city && (body.cityLat == null || body.cityLng == null)) {
+      const coords = await geocodeAnywhere(body.city);
+      if (coords) Object.assign(body, { cityLat: coords.lat, cityLng: coords.lng });
+    }
     const user = await createUser(body);
     // After responding: fetch Deezer's similar artists for picks that don't have them yet
     after(() => enrichArtists(user.artists.map((artist) => artist.name)));
