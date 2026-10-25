@@ -16,6 +16,7 @@ const HIDDEN = new Set([
   "/auth/callback",
   "/logout",
 ]);
+const HIDDEN_SUFFIXES = ["/icebreaker"];
 
 const ITEMS = [
   { href: "/matches", label: "Matches", icon: MatchesIcon },
@@ -27,7 +28,7 @@ const ITEMS = [
 export function BottomNav() {
   const pathname = usePathname();
 
-  if (HIDDEN.has(pathname)) {
+  if (HIDDEN.has(pathname) || HIDDEN_SUFFIXES.some((suffix) => pathname.endsWith(suffix))) {
     return null;
   }
 

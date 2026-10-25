@@ -1,7 +1,8 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { dominantColorFromImage } from "@/lib/color";
 import { isStoreError, StoreError } from "@/lib/errors";
-import { buildMatches, socialsFor, summarizeTaste } from "@/lib/matching";
+import { buildMatches, icebreakerFor, summarizeTaste } from "@/lib/matching";
+import { demoAutoReply, icebreakerPrompts, icebreakerText } from "@/lib/icebreakers";
 import { normalizeName, normalizeQuery } from "@/lib/normalize";
 import { createSeed } from "@/lib/seed";
 import type {
@@ -16,14 +17,18 @@ import type {
   RsvpResponse,
   RsvpStatus,
   SearchArtist,
+  SendIcebreakerResponse,
+  ShareResponse,
   ShowDetail,
   ShowListResponse,
   ShowSummary,
   SkipResponse,
   StoredArtist,
+  StoredIcebreaker,
   StoredInterest,
   StoredLink,
   StoredRsvp,
+  StoredShare,
   StoredShow,
   StoredSkip,
   StoredUser,
@@ -319,6 +324,8 @@ function matchesOf(snapshot: DataSnapshot, userId: string): MatchesResponse | nu
       going: snapshot.rsvps.filter((rsvp) => rsvp.status === "going"),
       now: Date.now(),
     },
+    snapshot.icebreakers,
+    snapshot.shares.map((edge) => ({ userId: edge.userId, otherUserId: edge.otherUserId })),
   );
 }
 
@@ -860,7 +867,7 @@ class SupabaseRepo implements Repo {
   }
 
   async load(): Promise<DataSnapshot> {
-    const [users, artists, links, related, shows, rsvps, interests, skips] = await Promise.all([
+    const [users, artists, links, related, shows, rsvps, interests, skips, shares, icebreakers] = await Promise.all([
       this.rows("users", ["id"]),
       this.rows("artists", ["id"]),
       this.rows("user_artists", ["user_id", "artist_id"]),
@@ -869,6 +876,8 @@ class SupabaseRepo implements Repo {
       this.rows("show_rsvps", ["user_id", "show_id"]),
       this.rows("match_interest", ["user_id", "other_user_id"]),
       this.rows("match_skip", ["user_id", "other_user_id"]),
+      this.rows("match_share", ["user_id", "other_user_id"]),
+      this.rows("match_icebreaker", ["id"]),
     ]);
     return {
       users: users.map(mapUser),
@@ -905,6 +914,26 @@ class SupabaseRepo implements Repo {
           createdAt: text(row.created_at) ?? new Date().toISOString(),
         };
         return edge;
+      }),
+      shares: shares.map((row) => {
+        const edge: StoredShare = {
+          userId: String(row.user_id),
+          otherUserId: String(row.other_user_id),
+          createdAt: text(row.created_at) ?? new Date().toISOString(),
+        };
+        return edge;
+      }),
+      icebreakers: icebreakers.map((row) => {
+        const entry: StoredIcebreaker = {
+          id: String(row.id),
+          senderId: String(row.sender_id),
+          recipientId: String(row.recipient_id),
+          promptId: text(row.prompt_id) ?? "",
+          promptText: text(row.prompt_text) ?? "",
+          replyToId: text(row.reply_to_id),
+          createdAt: text(row.created_at) ?? new Date().toISOString(),
+        };
+        return entry;
       }),
     };
   }
@@ -1020,6 +1049,40 @@ class SupabaseRepo implements Repo {
         created_at: edge.createdAt,
       }));
     if (skipRows.length) await this.write("match_skip", this.client.from("match_skip").insert(skipRows));
+
+    const beforeShares = new Set(before.shares.map(interestKey));
+    const afterShares = new Set(after.shares.map(interestKey));
+    for (const edge of before.shares) {
+      if (afterShares.has(interestKey(edge))) continue;
+      await this.write(
+        "match_share",
+        this.client.from("match_share").delete().eq("user_id", edge.userId).eq("other_user_id", edge.otherUserId),
+      );
+    }
+    const shareRows = after.shares
+      .filter((edge) => !beforeShares.has(interestKey(edge)))
+      .map((edge) => ({
+        user_id: edge.userId,
+        other_user_id: edge.otherUserId,
+        created_at: edge.createdAt,
+      }));
+    if (shareRows.length) await this.write("match_share", this.client.from("match_share").insert(shareRows));
+
+    const knownIcebreakers = new Set(before.icebreakers.map((row) => row.id));
+    const icebreakerRows = after.icebreakers
+      .filter((row) => !knownIcebreakers.has(row.id))
+      .map((row) => ({
+        id: row.id,
+        sender_id: row.senderId,
+        recipient_id: row.recipientId,
+        prompt_id: row.promptId,
+        prompt_text: row.promptText,
+        reply_to_id: row.replyToId,
+        created_at: row.createdAt,
+      }));
+    if (icebreakerRows.length) {
+      await this.write("match_icebreaker", this.client.from("match_icebreaker").insert(icebreakerRows));
+    }
   }
 
   async userIdForToken(token: string): Promise<string | null> {
@@ -1104,6 +1167,8 @@ function repo(): Repo {
 /** Snapshots held in memory across dev reloads can predate newer fields. */
 function filled(snapshot: DataSnapshot): DataSnapshot {
   if (!Array.isArray(snapshot.skips)) snapshot.skips = [];
+  if (!Array.isArray(snapshot.icebreakers)) snapshot.icebreakers = [];
+  if (!Array.isArray(snapshot.shares)) snapshot.shares = [];
   for (const user of snapshot.users) {
     if (typeof user.name !== "string") user.name = user.handle || "";
     if (user.phone === undefined) user.phone = null;
@@ -1271,8 +1336,33 @@ export async function setInterest(userId: string, otherUserId: string): Promise<
         snapshot.interests.some((edge) => edge.userId === userId && edge.otherUserId === otherUserId) &&
         snapshot.interests.some((edge) => edge.userId === otherUserId && edge.otherUserId === userId);
       const other = toPeople(snapshot).find((person) => person.id === otherUserId);
+
+      // Demo profiles also send an icebreaker back, so the receiving-end UI is demoable solo.
+      if (mutual && other?.isDemo) {
+        const alreadySent = snapshot.icebreakers.some(
+          (row) => row.senderId === otherUserId && row.recipientId === userId,
+        );
+        if (!alreadySent) {
+          const topShared =
+            matchesOf(snapshot, userId)?.matches.find((card) => card.userId === otherUserId)?.sharedArtists[0]
+              ?.name ?? null;
+          const [prompt] = icebreakerPrompts(topShared);
+          if (prompt) {
+            snapshot.icebreakers.push({
+              id: crypto.randomUUID(),
+              senderId: otherUserId,
+              recipientId: userId,
+              promptId: prompt.id,
+              promptText: prompt.text,
+              replyToId: null,
+              createdAt: new Date().toISOString(),
+            });
+          }
+        }
+      }
+
       const match = matchesOf(snapshot, userId)?.matches.find((card) => card.userId === otherUserId) ?? null;
-      return { mutual, socials: other ? socialsFor(other, mutual) : null, match };
+      return { mutual, socials: match?.socials ?? null, match };
     });
   } catch (error) {
     throw wrap(error);
@@ -1301,6 +1391,180 @@ export async function setSkip(
         snapshot.skips = snapshot.skips.filter((edge) => !same(edge));
       }
       return { skipped };
+    });
+  } catch (error) {
+    throw wrap(error);
+  }
+}
+
+/**
+ * Choosing to share your socials with a match. Requires mutual interest first. Socials only
+ * actually unlock once BOTH sides have independently chosen to share, on top of that — one
+ * person sharing never reveals anything to or about the other on its own.
+ */
+export async function setShare(
+  userId: string,
+  otherUserId: string,
+  shared: boolean,
+): Promise<ShareResponse | null> {
+  try {
+    if (userId === otherUserId) throw new StoreError(400, "Choose someone else");
+    return await edit(async (snapshot) => {
+      if (!snapshot.users.some((user) => user.id === userId)) return null;
+      const other = snapshot.users.find((user) => user.id === otherUserId);
+      if (!other) return null;
+
+      const mutual =
+        snapshot.interests.some((edge) => edge.userId === userId && edge.otherUserId === otherUserId) &&
+        snapshot.interests.some((edge) => edge.userId === otherUserId && edge.otherUserId === userId);
+      if (!mutual) throw new StoreError(403, "You can share once you're both interested");
+
+      const same = (edge: { userId: string; otherUserId: string }) =>
+        edge.userId === userId && edge.otherUserId === otherUserId;
+      if (shared) {
+        if (!snapshot.shares.some(same)) {
+          snapshot.shares.push({ userId, otherUserId, createdAt: new Date().toISOString() });
+        }
+        // Demo profiles share back immediately, so the mutual-share state is reachable solo.
+        const answered = snapshot.shares.some(
+          (edge) => edge.userId === otherUserId && edge.otherUserId === userId,
+        );
+        if (other.isDemo && !answered) {
+          snapshot.shares.push({ userId: otherUserId, otherUserId: userId, createdAt: new Date().toISOString() });
+        }
+      } else {
+        snapshot.shares = snapshot.shares.filter((edge) => !same(edge));
+      }
+
+      const match = matchesOf(snapshot, userId)?.matches.find((card) => card.userId === otherUserId) ?? null;
+      return {
+        youShared: shared,
+        socialsUnlocked: Boolean(match?.socialsUnlocked),
+        socials: match?.socials ?? null,
+      };
+    });
+  } catch (error) {
+    throw wrap(error);
+  }
+}
+
+/**
+ * Sends an icebreaker to a mutual match: either one of the fixed prompts (promptId) or your
+ * own custom text. Same gate as socials: only works once both sides have tapped interested.
+ *
+ * Prompts and replies form rounds: a prompt opens a round, and only the recipient of that
+ * prompt can close it by replying. Nobody can open a new round while one is already open.
+ * Demo profiles auto-reply to whatever you send them, so a solo demo never gets stuck waiting.
+ */
+export async function sendIcebreaker(
+  userId: string,
+  otherUserId: string,
+  promptId: string | null,
+  customText: string | null,
+): Promise<SendIcebreakerResponse | null> {
+  try {
+    if (userId === otherUserId) throw new StoreError(400, "Choose someone else");
+    return await edit(async (snapshot) => {
+      if (!snapshot.users.some((user) => user.id === userId)) return null;
+      const other = snapshot.users.find((user) => user.id === otherUserId);
+      if (!other) return null;
+
+      const mutual =
+        snapshot.interests.some((edge) => edge.userId === userId && edge.otherUserId === otherUserId) &&
+        snapshot.interests.some((edge) => edge.userId === otherUserId && edge.otherUserId === userId);
+      if (!mutual) throw new StoreError(403, "You can send an icebreaker once you're both interested");
+
+      // One open prompt per pair at a time, whoever sent it: once either side asks, nobody
+      // (including the asker) can ask again until the recipient answers it.
+      const state = icebreakerFor(userId, otherUserId, true, snapshot.icebreakers)!;
+      const openRound = state.rounds[state.rounds.length - 1];
+      const isOpen = Boolean(openRound && !openRound.reply);
+
+      // Asking is always one of the fixed prompts; answering is always your own words.
+      let text: string | null;
+      let finalPromptId: string;
+      let replyToId: string | null;
+      if (promptId) {
+        if (isOpen) throw new StoreError(403, "Wait for the open prompt to be answered first.");
+        const match = matchesOf(snapshot, userId)?.matches.find((card) => card.userId === otherUserId) ?? null;
+        const topShared = match?.sharedArtists[0]?.name ?? null;
+        text = icebreakerText(promptId, topShared);
+        finalPromptId = promptId;
+        replyToId = null;
+        if (!text) throw new StoreError(400, "Pick a different prompt");
+      } else {
+        if (!isOpen || openRound.promptFromMe) throw new StoreError(400, "Nothing to answer yet");
+        text = customText?.trim().slice(0, 240) || null;
+        finalPromptId = "custom";
+        replyToId = openRound.id;
+        if (!text) throw new StoreError(400, "Answer in your own words");
+      }
+      const sent: StoredIcebreaker = {
+        id: crypto.randomUUID(),
+        senderId: userId,
+        recipientId: otherUserId,
+        promptId: finalPromptId,
+        promptText: text,
+        replyToId,
+        createdAt: new Date().toISOString(),
+      };
+      snapshot.icebreakers.push(sent);
+
+      // Demo asking you something new: prefers a prompt neither side has opened with yet in
+      // this conversation (not just ones the demo itself asked — otherwise it can immediately
+      // re-ask the exact question you just asked it), cycling back once they run out.
+      const demoAsksSomethingNew = () => {
+        const askedBefore = snapshot.icebreakers.filter(
+          (row) =>
+            !row.replyToId &&
+            ((row.senderId === otherUserId && row.recipientId === userId) ||
+              (row.senderId === userId && row.recipientId === otherUserId)),
+        );
+        const alreadyAsked = new Set(askedBefore.map((row) => row.promptId));
+        const match = matchesOf(snapshot, userId)?.matches.find((card) => card.userId === otherUserId) ?? null;
+        const topShared = match?.sharedArtists[0]?.name ?? null;
+        const candidates = icebreakerPrompts(topShared);
+        if (candidates.length === 0) return;
+        const next =
+          candidates.find((candidate) => !alreadyAsked.has(candidate.id)) ??
+          candidates[askedBefore.length % candidates.length];
+        snapshot.icebreakers.push({
+          id: crypto.randomUUID(),
+          senderId: otherUserId,
+          recipientId: userId,
+          promptId: next.id,
+          promptText: next.text,
+          replyToId: null,
+          createdAt: new Date().toISOString(),
+        });
+      };
+
+      if (!replyToId && other.isDemo) {
+        // A new round opened on a demo profile: they reply immediately so you're never stuck waiting.
+        const match = matchesOf(snapshot, userId)?.matches.find((card) => card.userId === otherUserId) ?? null;
+        const topShared = match?.sharedArtists[0]?.name ?? null;
+        snapshot.icebreakers.push({
+          id: crypto.randomUUID(),
+          senderId: otherUserId,
+          recipientId: userId,
+          promptId: "custom",
+          promptText: demoAutoReply(sent.promptId, topShared, snapshot.icebreakers.length),
+          replyToId: sent.id,
+          createdAt: new Date().toISOString(),
+        });
+        // About half the time they also turn around and ask you something themselves, so
+        // they keep getting chances to be the asker instead of just answering forever.
+        if (Math.random() < 0.5) demoAsksSomethingNew();
+      }
+
+      if (replyToId && other.isDemo && Math.random() < 0.5) {
+        // You just answered a question the demo asked: about half the time they ask
+        // something new right back, and the rest of the time they leave it open so you get
+        // to be the one who asks next.
+        demoAsksSomethingNew();
+      }
+
+      return { icebreaker: icebreakerFor(userId, otherUserId, true, snapshot.icebreakers)! };
     });
   } catch (error) {
     throw wrap(error);

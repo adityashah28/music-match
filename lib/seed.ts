@@ -616,5 +616,5 @@ export function createSeed(): DataSnapshot {
     return { userId: user.id, showId: show.id, status: "going" };
   });
 
-  return { users, artists, links, related, shows, rsvps, interests: [], skips: [] };
+  return { users, artists, links, related, shows, rsvps, interests: [], skips: [], shares: [], icebreakers: [] };
 }

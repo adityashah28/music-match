@@ -1,12 +1,14 @@
 import { agesCompatible } from "./age";
 import { normalizeName } from "./normalize";
 import type {
+  IcebreakerState,
   InterestEdge,
   MatchCard,
   MatchPerson,
   MatchShow,
   MatchesResponse,
   Socials,
+  StoredIcebreaker,
   StoredShow,
 } from "./types";
 
@@ -123,14 +125,48 @@ export function whyLine(sharedNames: string[]): string {
   return `You both listed ${names[0]}, ${names[1]}, and ${names[2]}.`;
 }
 
-export function socialsFor(person: MatchPerson, mutual: boolean): Socials {
-  if (!mutual) return null;
+/** Revealed only once there's mutual interest AND both sides have independently chosen to share. */
+export function socialsFor(person: MatchPerson, mutual: boolean, mutualShare: boolean): Socials {
+  if (!mutual || !mutualShare) return null;
   if (person.isDemo) return { placeholder: true, kind: "demo" };
   return {
     instagram: person.instagram,
     tiktok: person.tiktok,
     snapchat: person.snapchat,
   };
+}
+
+export function icebreakerFor(
+  selfId: string,
+  otherId: string,
+  mutual: boolean,
+  icebreakers: StoredIcebreaker[],
+): IcebreakerState | null {
+  if (!mutual) return null;
+  const between = icebreakers.filter(
+    (row) =>
+      (row.senderId === selfId && row.recipientId === otherId) ||
+      (row.senderId === otherId && row.recipientId === selfId),
+  );
+  const replyByPromptId = new Map(
+    between.filter((row) => row.replyToId).map((row) => [row.replyToId as string, row]),
+  );
+  const rounds = between
+    .filter((row) => !row.replyToId)
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+    .map((prompt) => {
+      const reply = replyByPromptId.get(prompt.id);
+      return {
+        id: prompt.id,
+        promptFromMe: prompt.senderId === selfId,
+        promptText: prompt.promptText,
+        promptAt: prompt.createdAt,
+        reply: reply
+          ? { fromMe: reply.senderId === selfId, text: reply.promptText, createdAt: reply.createdAt }
+          : null,
+      };
+    });
+  return { rounds };
 }
 
 export type ShowContext = {
@@ -194,6 +230,8 @@ export function buildMatches(
   interests: InterestEdge[],
   skips: InterestEdge[] = [],
   showContext: ShowContext = { shows: [], going: [], now: Date.now() },
+  icebreakers: StoredIcebreaker[] = [],
+  shares: InterestEdge[] = [],
 ): MatchesResponse | null {
   const self = people.find((person) => person.id === selfId);
   if (!self) return null;
@@ -225,6 +263,13 @@ export function buildMatches(
 
   const skipped = new Set(
     skips.filter((edge) => edge.userId === selfId).map((edge) => edge.otherUserId),
+  );
+
+  const sharedOut = new Set(
+    shares.filter((edge) => edge.userId === selfId).map((edge) => edge.otherUserId),
+  );
+  const sharedIn = new Set(
+    shares.filter((edge) => edge.otherUserId === selfId).map((edge) => edge.userId),
   );
 
   const ranked = people
@@ -259,6 +304,8 @@ export function buildMatches(
     const { label, score } = labelFor(entry.ratio);
     const interested = outgoing.has(entry.person.id);
     const mutual = interested && incoming.has(entry.person.id);
+    const youShared = sharedOut.has(entry.person.id);
+    const mutualShare = youShared && sharedIn.has(entry.person.id);
     const shows = pickShows(
       selfId,
       entry.person.id,
@@ -284,7 +331,10 @@ export function buildMatches(
       suggestedShow: mutual ? shows.shared : null,
       interested,
       mutual,
-      socials: socialsFor(entry.person, mutual),
+      youShared,
+      socialsUnlocked: mutual && mutualShare,
+      socials: socialsFor(entry.person, mutual, mutualShare),
+      icebreaker: icebreakerFor(selfId, entry.person.id, mutual, icebreakers),
     };
   });
 

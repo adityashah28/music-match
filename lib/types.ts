@@ -132,6 +132,33 @@ export type MatchShow = {
   going: ShowGoing;
 };
 
+/** One prompt from the fixed list, filled in with a shared artist if the template needs one. */
+export type IcebreakerPrompt = { id: string; text: string };
+
+export type IcebreakerReply = {
+  /** true if you sent it, false if they did. */
+  fromMe: boolean;
+  text: string;
+  createdAt: string;
+};
+
+/**
+ * One prompt and (once answered) its reply. A round stays open — blocking either side from
+ * starting a new one — until the recipient of the prompt replies to it.
+ */
+export type IcebreakerRound = {
+  id: string;
+  promptFromMe: boolean;
+  promptText: string;
+  promptAt: string;
+  reply: IcebreakerReply | null;
+};
+
+export type IcebreakerState = {
+  /** All rounds exchanged with this match, oldest first. The last one may still be open. */
+  rounds: IcebreakerRound[];
+};
+
 export type MatchCard = {
   userId: string;
   name: string;
@@ -149,7 +176,15 @@ export type MatchCard = {
   suggestedShow: MatchShow | null;
   interested: boolean;
   mutual: boolean;
+  /** Whether you've chosen to share your socials with them. Doesn't require mutual sharing. */
+  youShared: boolean;
+  /** True once you've both independently chosen to share, on top of mutual interest. The
+   * authoritative signal — don't infer this from whether `socials` looks empty, since a demo's
+   * placeholder and "not shared yet" can normalize to the same-looking empty shape. */
+  socialsUnlocked: boolean;
   socials: Socials;
+  /** Only set once the match is mutual, same gate as interest (not tied to sharing). */
+  icebreaker: IcebreakerState | null;
 };
 
 export type MatchesResponse = {
@@ -165,6 +200,16 @@ export type InterestResponse = {
 
 export type SkipResponse = {
   skipped: boolean;
+};
+
+export type ShareResponse = {
+  youShared: boolean;
+  socialsUnlocked: boolean;
+  socials: Socials;
+};
+
+export type SendIcebreakerResponse = {
+  icebreaker: IcebreakerState;
 };
 
 export type ShowSummary = {
@@ -314,6 +359,23 @@ export type StoredSkip = {
   createdAt: string;
 };
 
+export type StoredShare = {
+  userId: string;
+  otherUserId: string;
+  createdAt: string;
+};
+
+export type StoredIcebreaker = {
+  id: string;
+  senderId: string;
+  recipientId: string;
+  promptId: string;
+  promptText: string;
+  /** Null if this opens a new round; otherwise the id of the prompt it answers. */
+  replyToId: string | null;
+  createdAt: string;
+};
+
 export type DataSnapshot = {
   users: StoredUser[];
   artists: StoredArtist[];
@@ -323,4 +385,6 @@ export type DataSnapshot = {
   rsvps: StoredRsvp[];
   interests: StoredInterest[];
   skips: StoredSkip[];
+  shares: StoredShare[];
+  icebreakers: StoredIcebreaker[];
 };
