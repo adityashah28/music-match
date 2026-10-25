@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Instrument_Serif, Khula } from "next/font/google";
+import { BottomNav } from "@/components/BottomNav";
 import { SiteHeader } from "@/components/SiteHeader";
 import { THEME_BAR_COLOR, THEME_KEY } from "@/lib/theme";
 import "./globals.css";
@@ -71,6 +72,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <div className="relative min-h-dvh w-full">
           <SiteHeader />
           {children}
+          <BottomNav />
         </div>
       </body>
     </html>
