@@ -5,7 +5,7 @@ import { listShows } from "@/lib/store";
 export const dynamic = "force-dynamic";
 
 /**
- * GET /api/shows?userId=&q=&limit=&offset=
+ * GET /api/shows?userId=&q=&genre=&limit=&offset=
  * Upcoming shows nearest the viewer first. q searches artist, venue and city across all shows;
  * limit/offset page through them (no limit returns every match).
  */
@@ -24,6 +24,7 @@ export async function GET(request: Request) {
     };
     const shows = await listShows(userId, {
       q: params.get("q")?.slice(0, 100) ?? "",
+      genre: params.get("genre")?.trim() || undefined,
       limit: number("limit"),
       offset: number("offset"),
     });

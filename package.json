@@ -11,7 +11,8 @@
     "seed:artists": "tsx --env-file=.env.local scripts/seed-artists.ts",
     "seed:demo": "tsx --env-file=.env.local scripts/seed-demo-users.ts",
     "seed:shows": "tsx --env-file=.env.local scripts/seed-shows.ts",
-    "geocode:shows": "tsx --env-file=.env.local scripts/geocode-shows.ts"
+    "geocode:shows": "tsx --env-file=.env.local scripts/geocode-shows.ts",
+    "genres:shows": "tsx --env-file=.env.local scripts/genres-shows.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",

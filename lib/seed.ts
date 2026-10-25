@@ -604,6 +604,7 @@ export function createSeed(): DataSnapshot {
       updatedAt: SEEDED_AT,
       lat: null,
       lng: null,
+      genres: [],
     };
   });
 

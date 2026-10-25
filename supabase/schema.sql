@@ -93,7 +93,9 @@ create table if not exists shows (
   image_url text,
   -- Coordinates of the show's city, for sorting by distance from the viewer
   lat double precision,
-  lng double precision
+  lng double precision,
+  -- Genre ids from lib/genres.ts, for the Shows genre filter
+  genres text[] not null default '{}'
 );
 
 create index if not exists shows_normalized_artist_name_idx on shows (normalized_artist_name);

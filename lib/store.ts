@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { dominantColorFromImage } from "@/lib/color";
 import { distanceKm, type Coords } from "@/lib/geocode";
+import { GENRES, isGenre } from "@/lib/genres";
 import { isStoreError, StoreError } from "@/lib/errors";
 import { buildMatches, icebreakerFor, summarizeTaste } from "@/lib/matching";
 import { demoAutoReply, icebreakerPrompts, icebreakerText } from "@/lib/icebreakers";
@@ -350,7 +351,7 @@ function matchesOf(snapshot: DataSnapshot, userId: string): MatchesResponse | nu
 
 function listShowsOf(snapshot: DataSnapshot, userId: string, options: ShowListOptions = {}): ShowListResponse {
   const matches = matchesOf(snapshot, userId);
-  if (!matches) return { shows: [], total: 0, hasMore: false };
+  if (!matches) return { shows: [], total: 0, hasMore: false, genres: [] };
   const people = toPeople(snapshot);
   // Every upcoming show is listed; this only labels why a show is relevant to you, strongest first
   const reasons = new Map<string, ShowReason>();
@@ -399,8 +400,20 @@ function listShowsOf(snapshot: DataSnapshot, userId: string, options: ShowListOp
   // Nearest first, in rings: everything within 25 km sorts by date, then the next 25 km, and so on.
   // Pure distance would bury a show 15 km away tonight under every show in your own city next year.
   const ring = (km: number | null) => (km == null ? Number.POSITIVE_INFINITY : Math.floor(km / SHOW_RING_KM));
-  const ranked = snapshot.shows
-    .filter((show) => (!show.startsAt || Date.parse(show.startsAt) >= cutoff) && matchesSearch(show))
+  const searched = snapshot.shows.filter(
+    (show) => (!show.startsAt || Date.parse(show.startsAt) >= cutoff) && matchesSearch(show),
+  );
+
+  // The genre filter's options: genres among the search results, counted before filtering by genre
+  const genreCounts = new Map<string, number>();
+  for (const show of searched) for (const g of show.genres) genreCounts.set(g, (genreCounts.get(g) ?? 0) + 1);
+  const genres = GENRES.filter((g) => genreCounts.has(g.id))
+    .map((g) => ({ id: g.id, label: g.label, count: genreCounts.get(g.id)! }))
+    .sort((a, b) => b.count - a.count);
+
+  const genre = options.genre && isGenre(options.genre) ? options.genre : null;
+  const ranked = searched
+    .filter((show) => !genre || show.genres.includes(genre))
     .map((show) => ({ show, km: distanceTo(show) }))
     .sort((a, b) => ring(a.km) - ring(b.km) || time(a.show) - time(b.show));
 
@@ -410,8 +423,9 @@ function listShowsOf(snapshot: DataSnapshot, userId: string, options: ShowListOp
     ...showSummary(show, rsvps.get(show.id) ?? null, artistsByName),
     forYou: reasons.get(show.normalizedArtistName || normalizeName(show.artistName)) ?? null,
     distanceKm: km == null ? null : Math.round(km),
+    genres: show.genres,
   }));
-  return { shows, total: ranked.length, hasMore: offset + shows.length < ranked.length };
+  return { shows, total: ranked.length, hasMore: offset + shows.length < ranked.length, genres };
 }
 
 /** Width of each distance ring when sorting shows (see listShowsOf). */
@@ -641,6 +655,7 @@ async function absorbApify(snapshot: DataSnapshot, payload: unknown) {
           updatedAt: new Date().toISOString(),
           lat: null,
           lng: null,
+          genres: [],
         });
       }
     }
@@ -776,6 +791,7 @@ function mapShow(row: Record<string, unknown>): StoredShow {
     updatedAt: text(row.updated_at) ?? new Date().toISOString(),
     lat: num(row.lat),
     lng: num(row.lng),
+    genres: Array.isArray(row.genres) ? row.genres.filter((g): g is string => typeof g === "string") : [],
   };
 }
 
@@ -833,6 +849,7 @@ function showRow(show: StoredShow) {
     updated_at: show.updatedAt,
     lat: show.lat,
     lng: show.lng,
+    genres: show.genres,
   };
 }
 
@@ -882,7 +899,8 @@ function showChanged(before: StoredShow, after: StoredShow): boolean {
     before.imageUrl !== after.imageUrl ||
     before.source !== after.source ||
     before.lat !== after.lat ||
-    before.lng !== after.lng
+    before.lng !== after.lng ||
+    before.genres.join() !== after.genres.join()
   );
 }
 

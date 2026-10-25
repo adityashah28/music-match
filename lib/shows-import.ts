@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { geocodeCity } from "@/lib/geocode";
+import { fromScenes, fromSongkickGenres, type GenreId } from "@/lib/genres";
 import { normalizeName } from "@/lib/normalize";
 
 /**
@@ -31,6 +32,8 @@ export type ShowRow = {
   /** Coordinates of the show's city, filled in by saveShows. */
   lat?: number | null;
   lng?: number | null;
+  /** Genre ids (lib/genres.ts) from the source; saveShows adds the artist's scene tags. */
+  genres?: GenreId[];
 };
 
 /**
@@ -89,6 +92,7 @@ export function fromSongkickItems(items: Item[]): ShowRow[] {
     const performers = Array.isArray(e.performers) ? (e.performers as Item[]) : [];
     const headliner = str(performers[0]?.name);
     if (!headliner || e.eventId == null) return [];
+    const genres = fromSongkickGenres(performers[0]?.genres);
     const startDate = str(e.startDate);
     const row = show({
       source: "songkick",
@@ -100,7 +104,7 @@ export function fromSongkickItems(items: Item[]): ShowRow[] {
       ticket_url: str(e.url),
       image_url: str(e.image),
     });
-    return row ? [row] : [];
+    return row ? [{ ...row, genres }] : [];
   });
 }
 
@@ -141,6 +145,22 @@ export async function saveShows(db: SupabaseClient, candidates: ShowRow[]): Prom
   }
 
   const rows = [...winners.values()];
+
+  // Add the artist's scene tags (our seeded artists), on top of whatever genres the source gave
+  const names = [...new Set(rows.map((r) => r.normalized_artist_name))];
+  const scenesByName = new Map<string, string[]>();
+  for (let i = 0; i < names.length; i += 200) {
+    const { data, error } = await db
+      .from("artists")
+      .select("normalized_name, genres")
+      .in("normalized_name", names.slice(i, i + 200))
+      .neq("genres", "{}");
+    if (error) throw new Error(error.message);
+    for (const a of data) scenesByName.set(a.normalized_name, a.genres);
+  }
+  for (const row of rows) {
+    row.genres = [...new Set([...(row.genres ?? []), ...fromScenes(scenesByName.get(row.normalized_artist_name))])];
+  }
 
   // Coordinates of each show's city, so the Shows list can sort by distance (one lookup per city)
   for (const city of new Set(rows.map((r) => r.city).filter((c): c is string => Boolean(c)))) {

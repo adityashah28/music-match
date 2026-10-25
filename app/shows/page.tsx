@@ -39,6 +39,8 @@ export default function ShowsPage() {
   }, [query]);
   const filteredShows = shows;
   const [hasMore, setHasMore] = useState(false);
+  const [genre, setGenre] = useState("");
+  const [genreOptions, setGenreOptions] = useState<{ id: string; label: string; count: number }[]>([]);
   const [loadingMore, setLoadingMore] = useState(false);
   // Sticky once true: a search with zero matches shouldn't hide the bar that let you fix the search.
   const [everHadShows, setEverHadShows] = useState(false);
@@ -55,6 +57,7 @@ export default function ShowsPage() {
 
     const params = new URLSearchParams({ userId: id, limit: String(SHOWS_PER_PAGE) });
     if (search) params.set("q", search);
+    if (genre) params.set("genre", genre);
     fetchJson(`/api/shows?${params}`)
       .then((data) => {
         if (cancelled) return;
@@ -62,6 +65,7 @@ export default function ShowsPage() {
         setShows(next);
         if (next.length > 0) setEverHadShows(true);
         setHasMore(Boolean(data && typeof data === "object" && "hasMore" in data && data.hasMore));
+        setGenreOptions(genreOptionsFrom(data));
       })
       .catch(() => {
         if (!cancelled) setError(true);
@@ -73,7 +77,7 @@ export default function ShowsPage() {
     return () => {
       cancelled = true;
     };
-  }, [router, reload, search]);
+  }, [router, reload, search, genre]);
 
   /** Next page of the same search, added below the shows already on screen. */
   async function showMore() {
@@ -83,6 +87,7 @@ export default function ShowsPage() {
     try {
       const params = new URLSearchParams({ userId: id, limit: String(SHOWS_PER_PAGE), offset: String(shows.length) });
       if (search) params.set("q", search);
+      if (genre) params.set("genre", genre);
       const data = await fetchJson(`/api/shows?${params}`);
       const next = normalizeShows(data);
       setShows((current) => [...current, ...next.filter((show) => !current.some((item) => item.id === show.id))]);
@@ -124,7 +129,7 @@ export default function ShowsPage() {
           Shows
         </h1>
         <p className="mt-3 text-base font-normal leading-snug text-[var(--muted)]">
-          Shows for your artists and matches.
+          Bay Area shows, nearest first.
         </p>
 
         {!loading && !error && everHadShows ? (
@@ -141,6 +146,29 @@ export default function ShowsPage() {
               className="w-full bg-transparent text-base font-normal text-[var(--foreground)] outline-none placeholder:text-[var(--muted)]"
             />
           </label>
+        ) : null}
+
+        {!loading && !error && genreOptions.length > 0 ? (
+          <div className="mt-3 -mx-1 flex gap-2 overflow-x-auto px-1 pb-1" role="group" aria-label="Filter by genre">
+            {[{ id: "", label: "All", count: 0 }, ...genreOptions].map((option) => {
+              const selected = genre === option.id;
+              return (
+                <button
+                  key={option.id || "all"}
+                  type="button"
+                  aria-pressed={selected}
+                  onClick={() => setGenre(selected ? "" : option.id)}
+                  className={`min-h-9 shrink-0 cursor-pointer rounded-full border px-4 text-sm font-normal transition ${
+                    selected
+                      ? "border-[var(--foreground)] bg-[var(--foreground)] text-white"
+                      : "border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] hover:border-[var(--foreground)]"
+                  }`}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
         ) : null}
 
         {loading ? (
@@ -160,7 +188,7 @@ export default function ShowsPage() {
           </GlassCard>
         ) : null}
 
-        {!loading && !error && shows.length === 0 && !search ? (
+        {!loading && !error && shows.length === 0 && !search && !genre ? (
           <GlassCard className="mt-6 p-5">
             <p className="text-base leading-snug text-[var(--muted)]">
               No shows lined up for your artists yet.
@@ -171,11 +199,13 @@ export default function ShowsPage() {
           </GlassCard>
         ) : null}
 
-        {!loading && !error && (shows.length > 0 || search) ? (
+        {!loading && !error && (shows.length > 0 || search || genre) ? (
           <div className="mt-6 flex flex-col gap-4">
             {rsvpError ? <p className="text-sm text-[var(--muted)]">{rsvpError}</p> : null}
             {filteredShows.length === 0 ? (
-              <p className="text-base leading-snug text-[var(--muted)]">No shows match that search.</p>
+              <p className="text-base leading-snug text-[var(--muted)]">
+                {genre && !search ? "No upcoming shows in that genre." : "No shows match that search."}
+              </p>
             ) : (
               filteredShows.map((show) => {
                 const photo = photoFor(show.artistName, show.imageUrl);
@@ -236,6 +266,15 @@ export default function ShowsPage() {
         ) : null}
       </main>
     </GradientBackground>
+  );
+}
+
+/** The genre filter's options from a /api/shows response. */
+function genreOptionsFrom(data: unknown): { id: string; label: string; count: number }[] {
+  const list = data && typeof data === "object" && "genres" in data && Array.isArray(data.genres) ? data.genres : [];
+  return list.filter(
+    (g): g is { id: string; label: string; count: number } =>
+      Boolean(g) && typeof g.id === "string" && typeof g.label === "string" && typeof g.count === "number",
   );
 }
 

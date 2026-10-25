@@ -238,6 +238,8 @@ export type ShowListItem = ShowSummary & {
   forYou: ShowReason | null;
   /** Distance from the viewer's city in km, or null if either location is unknown. */
   distanceKm: number | null;
+  /** Genre ids from lib/genres.ts (empty when unknown). */
+  genres: string[];
 };
 
 /**
@@ -249,11 +251,15 @@ export type ShowListResponse = {
   /** Shows matching the search across all pages. */
   total: number;
   hasMore: boolean;
+  /** Genres present in the search results (before the genre filter), most shows first: the filter's options. */
+  genres: { id: string; label: string; count: number }[];
 };
 
 export type ShowListOptions = {
   /** Words that must all appear in the artist, venue or city. */
   q?: string;
+  /** Only shows tagged with this genre id (lib/genres.ts). */
+  genre?: string;
   limit?: number;
   offset?: number;
 };
@@ -377,6 +383,8 @@ export type StoredShow = {
   /** Coordinates of the show's city (null until geocoded). */
   lat: number | null;
   lng: number | null;
+  /** Genre ids from lib/genres.ts. */
+  genres: string[];
 };
 
 export type StoredRsvp = {

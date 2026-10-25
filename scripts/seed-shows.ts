@@ -7,6 +7,7 @@
 import { normalizeName } from "@/lib/normalize";
 import { supabase } from "./lib/db";
 import { getDeezerRelated, searchDeezerArtists } from "./lib/deezer";
+import { fromTicketmasterClassifications } from "@/lib/genres";
 import { fillMissingColors, saveDeezerArtists } from "./lib/artists";
 import {
   BANDSINTOWN_CITIES,
@@ -55,6 +56,7 @@ type TicketmasterEvent = {
   url?: string;
   dates?: { start?: { dateTime?: string; localDate?: string; localTime?: string } };
   images?: { url: string; ratio?: string; width?: number }[];
+  classifications?: { genre?: { name?: string }; subGenre?: { name?: string } }[];
   _embedded?: { venues?: { name?: string; city?: { name?: string } }[]; attractions?: { name: string }[] };
 };
 
@@ -63,7 +65,7 @@ function ticketmasterRow(e: TicketmasterEvent, artistName: string): ShowRow | nu
   const startsAt = start?.dateTime ?? (start?.localDate ? pacific(`${start.localDate}T${start.localTime ?? "20:00:00"}`) : "");
   const image = (e.images ?? []).filter((i) => i.ratio === "16_9").sort((a, b) => (b.width ?? 0) - (a.width ?? 0))[0];
   const venue = e._embedded?.venues?.[0];
-  return show({
+  const row = show({
     source: "ticketmaster",
     source_id: e.id,
     artist_name: artistName,
@@ -73,6 +75,7 @@ function ticketmasterRow(e: TicketmasterEvent, artistName: string): ShowRow | nu
     ticket_url: e.url ?? null,
     image_url: image?.url ?? null,
   });
+  return row ? { ...row, genres: fromTicketmasterClassifications(e.classifications) } : null;
 }
 
 async function ticketmaster(params: Record<string, string | number>): Promise<TicketmasterEvent[]> {
