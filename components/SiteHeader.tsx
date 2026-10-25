@@ -76,6 +76,11 @@ export function SiteHeader() {
   const isLanding = pathname === "/";
   const isOnboarding = ONBOARDING_PATHS.has(pathname);
 
+  function isActive(href: string) {
+    const pathOnly = href.split("#")[0] || "/";
+    return pathOnly !== "/" && (pathname === pathOnly || pathname.startsWith(`${pathOnly}/`));
+  }
+
   function renderCta(opts: { mobile?: boolean }) {
     if (!cta) return null;
 
@@ -128,10 +133,7 @@ export function SiteHeader() {
             {nav.length > 0 ? (
               <nav aria-label="Site" className="hidden items-center gap-6 md:flex">
                 {nav.map(({ href, label }) => {
-                  const pathOnly = href.split("#")[0] || "/";
-                  const active =
-                    pathOnly !== "/" &&
-                    (pathname === pathOnly || pathname.startsWith(`${pathOnly}/`));
+                  const active = isActive(href);
                   return (
                     <Link
                       key={href}
@@ -176,16 +178,24 @@ export function SiteHeader() {
           className="pointer-events-auto mx-4 mb-3 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] p-3 md:hidden"
         >
           <nav aria-label="Mobile" className="flex flex-col gap-1">
-            {nav.map(({ href, label }) => (
-              <Link
-                key={href}
-                href={href}
-                className="cursor-pointer px-4 py-3 text-base font-normal text-[var(--foreground)] transition duration-200 ease-out hover:bg-[var(--surface-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]"
-                onClick={() => setMenuOpen(false)}
-              >
-                {label}
-              </Link>
-            ))}
+            {nav.map(({ href, label }) => {
+              const active = isActive(href);
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  aria-current={active ? "page" : undefined}
+                  className={`flex min-h-11 cursor-pointer items-center px-4 text-sm font-normal transition duration-200 ease-out hover:bg-[var(--surface-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)] ${
+                    active
+                      ? "text-[var(--foreground)]"
+                      : "text-[var(--muted)] hover:text-[var(--foreground)]"
+                  }`}
+                  onClick={() => setMenuOpen(false)}
+                >
+                  {label}
+                </Link>
+              );
+            })}
             {renderCta({ mobile: true })}
           </nav>
         </div>
