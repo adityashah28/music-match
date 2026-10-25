@@ -292,13 +292,7 @@ h3 {
 }
 
 .screen-nav {
-  padding-bottom: calc(8rem + var(--safe-bottom));
-}
-
-@media (min-width: 768px) {
-  .screen-nav {
-    padding-bottom: calc(2.5rem + var(--safe-bottom));
-  }
+  padding-bottom: calc(2.5rem + var(--safe-bottom));
 }
 
 .screen-end {
