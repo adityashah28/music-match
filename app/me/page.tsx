@@ -23,6 +23,7 @@ import {
   fetchJson,
   getUserId,
   normalizeProfile,
+  normalizeSocialHandle,
   searchArtists,
   setUserId,
   type DraftArtist,
@@ -99,9 +100,9 @@ export default function MePage() {
         setAge(nextAge);
         setYounger(offsets.younger);
         setOlder(offsets.older);
-        setInstagram(profile.socials.instagram);
-        setTiktok(profile.socials.tiktok);
-        setSnapchat(profile.socials.snapchat);
+        setInstagram(normalizeSocialHandle(profile.socials.instagram));
+        setTiktok(normalizeSocialHandle(profile.socials.tiktok));
+        setSnapchat(normalizeSocialHandle(profile.socials.snapchat));
         setArtists(profile.artists);
       })
       .catch(() => {
@@ -218,9 +219,9 @@ export default function MePage() {
       age: clampAge(age),
       ageMin: range.min,
       ageMax: range.max,
-      instagram: instagram.trim(),
-      tiktok: tiktok.trim(),
-      snapchat: snapchat.trim(),
+      instagram: normalizeSocialHandle(instagram),
+      tiktok: normalizeSocialHandle(tiktok),
+      snapchat: normalizeSocialHandle(snapchat),
       artists,
     };
 
@@ -248,9 +249,9 @@ export default function MePage() {
           setYounger(offsets.younger);
           setOlder(offsets.older);
         }
-        setInstagram(profile.socials.instagram);
-        setTiktok(profile.socials.tiktok);
-        setSnapchat(profile.socials.snapchat);
+        setInstagram(normalizeSocialHandle(profile.socials.instagram));
+        setTiktok(normalizeSocialHandle(profile.socials.tiktok));
+        setSnapchat(normalizeSocialHandle(profile.socials.snapchat));
         setArtists(profile.artists);
       }
       setSaved(true);
@@ -370,29 +371,23 @@ export default function MePage() {
 
             <GlassCard className="flex flex-col gap-5 p-5">
               <h2 className="text-xl font-normal tracking-tight text-[var(--foreground)]">Socials</h2>
-              <Field
+              <SocialHandleField
                 id="instagram"
                 label="Instagram"
                 value={instagram}
                 onChange={edit(setInstagram)}
-                placeholder="@you"
-                autoComplete="off"
               />
-              <Field
+              <SocialHandleField
                 id="tiktok"
                 label="TikTok"
                 value={tiktok}
                 onChange={edit(setTiktok)}
-                placeholder="@you"
-                autoComplete="off"
               />
-              <Field
+              <SocialHandleField
                 id="snapchat"
                 label="Snapchat"
                 value={snapchat}
                 onChange={edit(setSnapchat)}
-                placeholder="@you"
-                autoComplete="off"
               />
             </GlassCard>
 
@@ -539,6 +534,43 @@ function Field({
           autoCapitalize={capitalize ? "words" : "none"}
           autoCorrect="off"
           className="text-base font-normal placeholder:text-[var(--muted)]"
+        />
+      </div>
+    </div>
+  );
+}
+
+function SocialHandleField({
+  id,
+  label,
+  value,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div>
+      <label className="block text-sm font-normal text-[var(--muted)]" htmlFor={id}>
+        {label}
+      </label>
+      <div className="field mt-2 flex min-h-12 w-full items-center pl-5 pr-4">
+        <span className="field-prefix text-base font-normal text-[var(--muted)]" aria-hidden="true">
+          {"@"}
+        </span>
+        <input
+          id={id}
+          value={value}
+          onChange={(event) => onChange(normalizeSocialHandle(event.target.value))}
+          onBlur={() => onChange(normalizeSocialHandle(value))}
+          placeholder="you"
+          autoComplete="off"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          className="min-w-0 flex-1 w-auto text-base font-normal placeholder:text-[var(--muted)]"
         />
       </div>
     </div>

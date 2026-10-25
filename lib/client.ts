@@ -178,14 +178,19 @@ export function normalizeArtist(value: unknown): DraftArtist | null {
   };
 }
 
+/** Store handles without a leading @. UI shows @ as a fixed prefix; links re-add it when needed. */
+export function normalizeSocialHandle(raw: string): string {
+  return raw.trim().replace(/^@+/, "").replace(/\s+/g, "");
+}
+
 export function normalizeSocials(value: unknown): Socials {
   const row = record(value);
   if (!row) return emptySocials();
   const nested = record(row.socials) ?? row;
   return {
-    instagram: text(nested.instagram) ?? "",
-    tiktok: text(nested.tiktok) ?? "",
-    snapchat: text(nested.snapchat) ?? "",
+    instagram: normalizeSocialHandle(text(nested.instagram) ?? ""),
+    tiktok: normalizeSocialHandle(text(nested.tiktok) ?? ""),
+    snapchat: normalizeSocialHandle(text(nested.snapchat) ?? ""),
   };
 }
 
@@ -193,11 +198,17 @@ export function hasSocial(socials: Socials) {
   return Boolean(socials.instagram || socials.tiktok || socials.snapchat);
 }
 
+function socialHref(value: string, base: string): string | null {
+  const handle = normalizeSocialHandle(value);
+  if (!handle) return null;
+  if (/^https?:\/\//i.test(handle)) return handle;
+  return `${base}${handle}`;
+}
+
 export function socialLinks(socials: Socials): { label: string; href: string }[] {
   const link = (value: string, label: string, base: string) => {
-    if (!value) return [];
-    if (/^https?:\/\//i.test(value)) return [{ label, href: value }];
-    return [{ label, href: `${base}${value.replace(/^@/, "")}` }];
+    const href = socialHref(value, base);
+    return href ? [{ label, href }] : [];
   };
   return [
     ...link(socials.instagram, "Instagram", "https://instagram.com/"),
@@ -208,9 +219,8 @@ export function socialLinks(socials: Socials): { label: string; href: string }[]
 
 export function primarySocial(socials: Socials): { label: string; href: string } | null {
   const link = (value: string, label: string, base: string) => {
-    if (!value) return null;
-    if (/^https?:\/\//i.test(value)) return { label, href: value };
-    return { label, href: `${base}${value.replace(/^@/, "")}` };
+    const href = socialHref(value, base);
+    return href ? { label, href } : null;
   };
 
   return (
@@ -278,9 +288,9 @@ export function getDraft(): Draft {
       age: numberOrNull(parsed.age),
       ageMin: numberOr(parsed.ageMin, 18),
       ageMax: numberOr(parsed.ageMax, 99),
-      instagram: typeof parsed.instagram === "string" ? parsed.instagram : "",
-      tiktok: typeof parsed.tiktok === "string" ? parsed.tiktok : "",
-      snapchat: typeof parsed.snapchat === "string" ? parsed.snapchat : "",
+      instagram: typeof parsed.instagram === "string" ? normalizeSocialHandle(parsed.instagram) : "",
+      tiktok: typeof parsed.tiktok === "string" ? normalizeSocialHandle(parsed.tiktok) : "",
+      snapchat: typeof parsed.snapchat === "string" ? normalizeSocialHandle(parsed.snapchat) : "",
     };
   } catch {
     return blankDraft();
@@ -292,6 +302,9 @@ export function setDraft(draft: Draft) {
     ...draft,
     artists: draft.artists.slice(0, 5),
     city: draft.city.trim(),
+    instagram: normalizeSocialHandle(draft.instagram),
+    tiktok: normalizeSocialHandle(draft.tiktok),
+    snapchat: normalizeSocialHandle(draft.snapchat),
   };
   sessionStorage.setItem(DRAFT_KEY, JSON.stringify(next));
 }
@@ -318,9 +331,9 @@ export function onboardingHref(draft: Draft = getDraft()): string {
 
 export function userPayload(draft: Draft) {
   const socials = {
-    instagram: draft.instagram.trim(),
-    tiktok: draft.tiktok.trim(),
-    snapchat: draft.snapchat.trim(),
+    instagram: normalizeSocialHandle(draft.instagram),
+    tiktok: normalizeSocialHandle(draft.tiktok),
+    snapchat: normalizeSocialHandle(draft.snapchat),
   };
   return {
     phone: draft.phone.trim(),
