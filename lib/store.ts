@@ -1399,6 +1399,16 @@ export async function loginByPhone(phone: string): Promise<{ profile: UserProfil
   }
 }
 
+/** True for Google's own profile-picture host — never a custom upload. */
+function isGoogleAvatarUrl(url: string | null): boolean {
+  if (!url) return false;
+  try {
+    return new URL(url).hostname === "lh3.googleusercontent.com";
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Log a verified Google sign-in into its profile: returns the profile and its token, or null if
  * no profile is linked to that Supabase Auth user. Fresh load, like loginByPhone.
@@ -1412,8 +1422,12 @@ export async function loginByAuthUser(
       const user = snapshot.users.find((row) => row.authUserId === authUserId);
       if (!user) return null;
       user.token ??= crypto.randomUUID();
-      // Keep the picture in step with the Google account (people change it)
-      if (avatarUrl) user.avatarUrl = avatarUrl;
+      // Keep the picture in step with the Google account (people change it) —
+      // but only while it's still a Google photo. A custom upload (Supabase
+      // storage or a data: URI) must never be overwritten on re-login.
+      if (avatarUrl && (!user.avatarUrl || isGoogleAvatarUrl(user.avatarUrl))) {
+        user.avatarUrl = avatarUrl;
+      }
       const profile = profileOf(snapshot, user.id);
       return profile ? { profile, token: user.token } : null;
     });
