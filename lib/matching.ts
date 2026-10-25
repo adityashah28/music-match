@@ -21,6 +21,7 @@ const GENRE_BONUS_CAP = 3;
 const STRONG_RATIO = 0.62;
 const GOOD_RATIO = 0.3;
 const MAX_MATCHES = 30;
+const MAX_SHARED_SHOWS = 5;
 
 export function artistWeight(listedBy: number): number {
   return 1 / Math.log(2 + Math.max(0, listedBy));
@@ -181,14 +182,14 @@ type ShowPick = { show: MatchShow; tier: number; time: number };
 /**
  * Tiers, best first: both going (0), shared artist with one of you going (1),
  * shared artist (2), they're going (3). Tiers 0-2 count as shared shows.
- * Past shows are dropped. Ties go to the soonest date.
+ * Past shows are dropped. Ties go to the soonest date. `shared` lists the best few shared shows.
  */
 export function pickShows(
   selfId: string,
   otherId: string,
   sharedNames: Set<string>,
   context: ShowContext,
-): { show: MatchShow | null; shared: MatchShow | null } {
+): { show: MatchShow | null; shared: MatchShow[] } {
   const picks: ShowPick[] = [];
   for (const show of context.shows) {
     const time = show.startsAt ? Date.parse(show.startsAt) : Number.NaN;
@@ -216,10 +217,12 @@ export function pickShows(
     });
   }
   picks.sort((a, b) => a.tier - b.tier || a.time - b.time);
-  const best = picks[0] ?? null;
   return {
-    show: best?.show ?? null,
-    shared: best && best.tier <= 2 ? best.show : null,
+    show: picks[0]?.show ?? null,
+    shared: picks
+      .filter((pick) => pick.tier <= 2)
+      .slice(0, MAX_SHARED_SHOWS)
+      .map((pick) => pick.show),
   };
 }
 
@@ -335,7 +338,8 @@ export function buildMatches(
         color: artist.color,
       })),
       show: shows.show,
-      suggestedShow: mutual ? shows.shared : null,
+      sharedShows: shows.shared,
+      suggestedShow: mutual ? (shows.shared[0] ?? null) : null,
       interested,
       mutual,
       youShared,

@@ -86,6 +86,7 @@ export type MatchPerson = {
   why: string;
   sharedArtists: DraftArtist[];
   show: MatchShowItem | null;
+  sharedShows: MatchShowItem[];
   suggestedShow: MatchShowItem | null;
   interested: boolean;
   mutual: boolean;
@@ -513,6 +514,9 @@ export function normalizeMatch(value: unknown): MatchPerson | null {
       .map(normalizeArtist)
       .filter((artist): artist is DraftArtist => artist !== null),
     show: normalizeMatchShow(row.show),
+    sharedShows: (Array.isArray(row.sharedShows) ? row.sharedShows : [])
+      .map(normalizeMatchShow)
+      .filter((show): show is MatchShowItem => show !== null),
     suggestedShow: normalizeMatchShow(row.suggestedShow),
     interested: row.interested === true,
     mutual: row.mutual === true,

@@ -137,24 +137,21 @@ export default function IcebreakerPage() {
 
   return (
     <GradientBackground>
-      <main
-        className="flex h-dvh flex-col overflow-hidden"
-        style={{ paddingTop: "calc(4.75rem + var(--safe-top))" }}
-      >
-        <div className="flex shrink-0 items-center gap-3 border-b border-[var(--border)] px-4 py-3">
+      <main className="screen flex h-dvh flex-col overflow-hidden">
+        <div className="grid shrink-0 grid-cols-[1fr_minmax(0,max-content)_1fr] items-center gap-3 border-b border-[var(--border)] py-3">
           <BackLink
             href={matchId ? `/matches/${encodeURIComponent(matchId)}` : "/matches"}
             label="Back"
-            className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 text-sm font-normal leading-none text-[var(--muted)] transition duration-200 ease-out hover:text-[var(--foreground)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]"
+            className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 justify-self-start text-sm font-normal leading-none text-[var(--muted)] transition duration-200 ease-out hover:text-[var(--foreground)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]"
           />
           {match ? (
-            <h1 className="font-sans min-w-0 truncate text-lg font-semibold leading-none text-[var(--foreground)]">
+            <h1 className="font-sans min-w-0 truncate text-center text-lg font-semibold leading-none text-[var(--foreground)]">
               <span className="btn-label">{match.handle}</span>
             </h1>
           ) : null}
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+        <div className="min-h-0 flex-1 overflow-y-auto py-4">
           {loading ? (
             <div aria-busy="true" className="flex flex-col gap-2">
               <span className="sr-only">Loading icebreaker</span>
@@ -235,7 +232,7 @@ export default function IcebreakerPage() {
 
         {match ? (
           <div
-            className="shrink-0 border-t border-[var(--border)] bg-[var(--background)] px-4 py-3"
+            className="shrink-0 border-t border-[var(--border)] py-3"
             style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
           >
             {postError ? <p className="mb-2 text-sm text-[var(--muted)]">{postError}</p> : null}

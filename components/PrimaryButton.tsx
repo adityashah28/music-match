@@ -4,7 +4,12 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 const buttonClass =
-  "font-sans inline-flex min-h-12 w-full cursor-pointer items-center justify-center rounded-full bg-[var(--foreground)] px-6 text-center text-base font-normal leading-none text-[var(--on-foreground)] transition duration-200 ease-out hover:bg-[var(--foreground-hover)] active:scale-[0.99] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)] disabled:pointer-events-none disabled:opacity-40";
+  "font-sans inline-flex cursor-pointer items-center justify-center rounded-full bg-[var(--foreground)] text-center font-normal leading-none text-[var(--on-foreground)] transition duration-200 ease-out hover:bg-[var(--foreground-hover)] active:scale-[0.99] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)] disabled:pointer-events-none disabled:opacity-40";
+
+const sizeClass = {
+  full: "min-h-12 w-full px-6 text-base",
+  compact: "min-h-10 px-5 text-sm",
+};
 
 function Label({ children }: { children: ReactNode }) {
   return <span className="btn-label">{children}</span>;
@@ -17,6 +22,7 @@ export function PrimaryButton({
   type,
   disabled,
   prefetch,
+  size = "full",
   className,
 }: {
   children: ReactNode;
@@ -26,9 +32,11 @@ export function PrimaryButton({
   disabled?: boolean;
   /** Prefetch linked route (default true for Get started → /pick). */
   prefetch?: boolean;
+  /** `full` stretches across its container; `compact` sizes to its label. */
+  size?: keyof typeof sizeClass;
   className?: string;
 }) {
-  const classes = `${buttonClass}${className ? ` ${className}` : ""}${disabled ? " pointer-events-none opacity-40" : ""}`;
+  const classes = `${buttonClass} ${sizeClass[size]}${className ? ` ${className}` : ""}${disabled ? " pointer-events-none opacity-40" : ""}`;
 
   if (href) {
     return (

@@ -177,6 +177,8 @@ export type MatchCard = {
   sharedArtists: SharedArtist[];
   /** Soonest upcoming show tied to this pair, for the card. */
   show: MatchShow | null;
+  /** Upcoming shows you share (both going, or a shared artist's show), best first. */
+  sharedShows: MatchShow[];
   /** Show to go to together. Only set once the match is mutual. */
   suggestedShow: MatchShow | null;
   interested: boolean;

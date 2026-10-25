@@ -183,6 +183,8 @@ export default function MatchDetailPage() {
   const demoProfile = Boolean(match?.isDemo || demoSocials);
   const links = match && !demoProfile ? socialLinks(match.socials) : [];
   const suggested = match?.mutual ? match.suggestedShow : null;
+  const otherShow =
+    match?.show && !match.sharedShows.some((show) => show.id === match.show?.id) ? match.show : null;
   const rounds = match?.icebreaker?.rounds ?? [];
   const latestRound = rounds[rounds.length - 1] ?? null;
   const waitingOnYou = Boolean(latestRound && !latestRound.reply && !latestRound.promptFromMe);
@@ -267,22 +269,45 @@ export default function MatchDetailPage() {
               ) : (
                 <p className="mt-3 text-base font-normal leading-snug text-[var(--muted)]">{match.why}</p>
               )}
-              {match.show ? (
+              {otherShow ? (
                 <Link
-                  href={`/shows/${match.show.id}`}
+                  href={`/shows/${otherShow.id}`}
                   className="mt-4 block rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--foreground)]"
                 >
-                  <MatchShowRow show={match.show} />
+                  <MatchShowRow show={otherShow} />
                 </Link>
               ) : null}
             </GlassCard>
 
-            <Link
-              href="/shows"
-              className="mt-5 inline-flex min-h-11 items-center self-start text-base font-semibold text-[var(--foreground)] underline decoration-[var(--border)] underline-offset-4"
-            >
-              Shared shows
-            </Link>
+            <GlassCard className="mt-4 p-5">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-[28px] font-normal leading-[1.05] tracking-tight text-[var(--foreground)]">
+                  Shared shows
+                </h2>
+                <Link
+                  href="/shows"
+                  className="shrink-0 text-sm font-normal text-[var(--muted)] transition duration-200 ease-out hover:text-[var(--foreground)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]"
+                >
+                  All shows
+                </Link>
+              </div>
+              {match.sharedShows.length > 0 ? (
+                <ul className="mt-4 flex flex-col gap-2">
+                  {match.sharedShows.map((show) => (
+                    <li key={show.id}>
+                      <Link
+                        href={`/shows/${show.id}`}
+                        className="block rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--foreground)]"
+                      >
+                        <MatchShowRow show={show} />
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-2 text-base leading-snug text-[var(--muted)]">No shared shows yet.</p>
+              )}
+            </GlassCard>
 
             {match.mutual ? (
               <GlassCard className="mt-5 p-5">
@@ -301,7 +326,7 @@ export default function MatchDetailPage() {
                         before either of you sees anything.
                       </p>
                       <div className="mt-4">
-                        <PrimaryButton onClick={shareSocials} disabled={sharing}>
+                        <PrimaryButton size="compact" onClick={shareSocials} disabled={sharing}>
                           {sharing ? "Sharing…" : "Share your socials"}
                         </PrimaryButton>
                       </div>
@@ -347,29 +372,26 @@ export default function MatchDetailPage() {
             ) : null}
 
             {match.mutual ? (
-              <Link
-                href={`/matches/${encodeURIComponent(match.userId)}/icebreaker`}
-                className="mt-4 block rounded-[var(--radius)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--foreground)]"
-              >
-                <GlassCard className="p-5">
-                  <div className="flex items-center justify-between gap-3">
-                    <h2 className="text-[28px] font-normal leading-[1.05] tracking-tight text-[var(--foreground)]">
-                      Icebreaker
-                    </h2>
-                    <span aria-hidden="true" className="shrink-0 text-xl text-[var(--muted)]">
-                      →
-                    </span>
-                  </div>
-                  <p className="mt-2 line-clamp-1 text-base leading-snug text-[var(--muted)]">
-                    {latestLine ?? "Pick a prompt to break the ice"}
-                  </p>
+              <GlassCard className="mt-4 p-5">
+                <div className="flex items-center justify-between gap-3">
+                  <h2 className="text-[28px] font-normal leading-[1.05] tracking-tight text-[var(--foreground)]">
+                    Icebreaker
+                  </h2>
                   {waitingOnYou ? (
-                    <span className="mt-3 inline-flex rounded-full bg-[var(--foreground)] px-2.5 py-1 text-xs font-normal text-[var(--on-foreground)]">
-                      Reply
+                    <span className="pill shrink-0 bg-[var(--foreground)] px-2.5 py-1 text-xs font-normal text-[var(--on-foreground)]">
+                      <span className="chip-label">Reply</span>
                     </span>
                   ) : null}
-                </GlassCard>
-              </Link>
+                </div>
+                <p className="mt-2 line-clamp-1 text-base leading-snug text-[var(--muted)]">
+                  {latestLine ?? "No messages yet. Pick a prompt to break the ice."}
+                </p>
+                <div className="mt-4">
+                  <PrimaryButton size="compact" href={`/matches/${encodeURIComponent(match.userId)}/icebreaker`}>
+                    Start chatting
+                  </PrimaryButton>
+                </div>
+              </GlassCard>
             ) : null}
 
             {suggested ? (
