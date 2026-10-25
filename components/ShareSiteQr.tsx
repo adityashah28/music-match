@@ -56,13 +56,13 @@ function ShareQrDialog({ url, onClose }: { url: string; onClose: () => void }) {
 
     async function buildQr() {
       try {
-        const QRCode = (await import("qrcode")).default;
-        const dataUrl = await QRCode.toDataURL(url, {
-          errorCorrectionLevel: "H",
-          margin: 4,
-          width: 440,
-          color: { dark: "#121212", light: "#ffffff" },
-        });
+        const mod = await import("qrcode");
+        // CJS interop: named `create` or `.default` depending on bundler.
+        const QRCode: QrCreateApi =
+          typeof (mod as QrCreateApi).create === "function"
+            ? (mod as QrCreateApi)
+            : (mod as { default: QrCreateApi }).default;
+        const dataUrl = renderDottedQrPng(QRCode, url);
         if (!cancelled) {
           setQrSrc(dataUrl);
           setQrFailed(false);
@@ -158,21 +158,21 @@ function ShareQrDialog({ url, onClose }: { url: string; onClose: () => void }) {
         <div className="mt-5 flex justify-center">
           <div className="rounded-[1.15rem] border border-[var(--border)] bg-[var(--surface-soft)] p-3">
             {qrSrc ? (
-              // eslint-disable-next-line @next/next/no-img-element -- data-URL from qrcode; not a remote asset
+              // eslint-disable-next-line @next/next/no-img-element -- data-URL from canvas; not a remote asset
               <img
                 src={qrSrc}
                 alt={`QR code for ${url}`}
                 width={220}
                 height={220}
-                className="block h-[220px] w-[220px] rounded-lg bg-white"
+                className="block h-[220px] w-[220px] rounded-[1.25rem] bg-white"
                 draggable={false}
               />
             ) : qrFailed ? (
-              <div className="flex h-[220px] w-[220px] items-center justify-center rounded-lg bg-white px-4 text-center text-sm text-[#121212]">
+              <div className="flex h-[220px] w-[220px] items-center justify-center rounded-[1.25rem] bg-white px-4 text-center text-sm text-[#121212]">
                 QR unavailable — copy the link below.
               </div>
             ) : (
-              <div className="h-[220px] w-[220px] animate-pulse rounded-lg bg-white" aria-hidden />
+              <div className="h-[220px] w-[220px] animate-pulse rounded-[1.25rem] bg-white" aria-hidden />
             )}
           </div>
         </div>
@@ -184,6 +184,122 @@ function ShareQrDialog({ url, onClose }: { url: string; onClose: () => void }) {
     </div>,
     document.body,
   );
+}
+
+const QR_DARK = "#121212";
+const QR_LIGHT = "#ffffff";
+const QR_PIXEL_SIZE = 440;
+const QR_QUIET_ZONE = 4;
+const FINDER_SIZE = 7;
+
+type QrCreateApi = {
+  create: (
+    text: string,
+    options?: { errorCorrectionLevel?: "L" | "M" | "Q" | "H" },
+  ) => {
+    modules: {
+      size: number;
+      get(row: number, col: number): number;
+    };
+  };
+};
+
+/**
+ * Draw a modern dotted QR to a single PNG data URL (one <img>, never N SVG nodes).
+ * Data modules = circles; finder eyes = rounded concentric squares for scan reliability.
+ */
+function renderDottedQrPng(QRCode: QrCreateApi, url: string): string {
+  const { modules } = QRCode.create(url, { errorCorrectionLevel: "H" });
+  const size = modules.size;
+  const totalModules = size + QR_QUIET_ZONE * 2;
+  const modulePx = QR_PIXEL_SIZE / totalModules;
+  const canvasSize = Math.round(QR_PIXEL_SIZE);
+  const outerRadius = modulePx * 2.4;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = canvasSize;
+  canvas.height = canvasSize;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Canvas unavailable");
+
+  // Soft outer corners baked into the bitmap (plus CSS radius on the <img>).
+  pathRoundedRect(ctx, 0, 0, canvasSize, canvasSize, outerRadius);
+  ctx.clip();
+
+  ctx.fillStyle = QR_LIGHT;
+  ctx.fillRect(0, 0, canvasSize, canvasSize);
+
+  const finders: Array<[number, number]> = [
+    [0, 0],
+    [size - FINDER_SIZE, 0],
+    [0, size - FINDER_SIZE],
+  ];
+
+  function inFinder(row: number, col: number): boolean {
+    return finders.some(
+      ([fr, fc]) => row >= fr && row < fr + FINDER_SIZE && col >= fc && col < fc + FINDER_SIZE,
+    );
+  }
+
+  ctx.fillStyle = QR_DARK;
+  for (const [fr, fc] of finders) {
+    drawRoundedFinder(ctx, QR_QUIET_ZONE + fc, QR_QUIET_ZONE + fr, modulePx);
+  }
+
+  const dotRadius = modulePx * 0.4;
+  for (let row = 0; row < size; row++) {
+    for (let col = 0; col < size; col++) {
+      if (!modules.get(row, col) || inFinder(row, col)) continue;
+      const cx = (QR_QUIET_ZONE + col + 0.5) * modulePx;
+      const cy = (QR_QUIET_ZONE + row + 0.5) * modulePx;
+      ctx.beginPath();
+      ctx.arc(cx, cy, dotRadius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  return canvas.toDataURL("image/png");
+}
+
+function drawRoundedFinder(
+  ctx: CanvasRenderingContext2D,
+  colModules: number,
+  rowModules: number,
+  modulePx: number,
+) {
+  const x = colModules * modulePx;
+  const y = rowModules * modulePx;
+  const unit = modulePx;
+
+  ctx.fillStyle = QR_DARK;
+  pathRoundedRect(ctx, x, y, FINDER_SIZE * unit, FINDER_SIZE * unit, unit * 1.15);
+  ctx.fill();
+
+  ctx.fillStyle = QR_LIGHT;
+  pathRoundedRect(ctx, x + unit, y + unit, 5 * unit, 5 * unit, unit * 0.8);
+  ctx.fill();
+
+  ctx.fillStyle = QR_DARK;
+  pathRoundedRect(ctx, x + 2 * unit, y + 2 * unit, 3 * unit, 3 * unit, unit * 0.55);
+  ctx.fill();
+}
+
+function pathRoundedRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number,
+) {
+  const radius = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.arcTo(x + w, y, x + w, y + h, radius);
+  ctx.arcTo(x + w, y + h, x, y + h, radius);
+  ctx.arcTo(x, y + h, x, y, radius);
+  ctx.arcTo(x, y, x + w, y, radius);
+  ctx.closePath();
 }
 
 function ShareIcon() {
