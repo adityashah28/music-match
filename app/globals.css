@@ -85,8 +85,10 @@
 
 /*
  * Theme switch (ThemeToggle): the new theme grows out of the button as a circle clipped onto
- * ::view-transition-new(root), laid over a still snapshot of the old theme. No crossfade.
+ * ::view-transition-new(root), laid over a still snapshot of the old theme. No crossfade, and none
+ * of the default 250ms pseudo animations, so the circle is the only motion.
  */
+::view-transition-group(root),
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation: none;
@@ -117,7 +119,8 @@
   }
 }
 
-.theme-icon-in {
+/* The icon remounts for the new theme while <html data-theme-switching> is set, so it spins in only on a toggle */
+:root[data-theme-switching] .theme-icon {
   animation: theme-icon-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
@@ -636,7 +639,7 @@ h3 {
   .gallery-tile-inner,
   .onboarding-segment,
   .setup-fill,
-  .theme-icon-in {
+  :root[data-theme-switching] .theme-icon {
     animation: none;
   }
 

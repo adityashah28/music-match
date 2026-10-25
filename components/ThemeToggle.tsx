@@ -1,34 +1,53 @@
 "use client";
 
-import { useState, useSyncExternalStore, type MouseEvent } from "react";
-import { flushSync } from "react-dom";
+import { useSyncExternalStore, type MouseEvent } from "react";
 import { THEME_BAR_COLOR, THEME_KEY, type Theme } from "@/lib/theme";
 
 export { THEME_KEY };
 
 /** The new theme grows out of the button as a circle (styles in app/globals.css). */
-const REVEAL_MS = 650;
-const REVEAL_EASING = "cubic-bezier(0.4, 0, 0.2, 1)";
+const REVEAL_MS = 600;
+const REVEAL_STEPS = 30;
 
-// Toggles notify these directly so a flushSync re-render picks up the new icon in the same frame
-const listeners = new Set<() => void>();
 let switching = false;
 
 function applyTheme(theme: Theme) {
   document.documentElement.dataset.theme = theme;
   document.querySelector('meta[name="theme-color"]')?.setAttribute("content", THEME_BAR_COLOR[theme]);
-  listeners.forEach((notify) => notify());
+}
+
+/**
+ * Circle radii for the reveal, paced by how much of the screen is covered rather than by radius.
+ * Easing the radius directly hides the first ~100ms under the button and spends the last ~250ms
+ * on a sliver in the far corner, which reads as a stall.
+ */
+function revealFrames(x: number, y: number, width: number, height: number): string[] {
+  const cols = 48;
+  const rows = Math.max(8, Math.round((cols * height) / width));
+  const distances: number[] = [];
+  for (let i = 0; i < cols; i++) {
+    for (let j = 0; j < rows; j++) {
+      distances.push(Math.hypot(((i + 0.5) * width) / cols - x, ((j + 0.5) * height) / rows - y));
+    }
+  }
+  distances.sort((a, b) => a - b);
+  const farthest = Math.hypot(Math.max(x, width - x), Math.max(y, height - y));
+  const frames: string[] = [];
+  for (let step = 0; step <= REVEAL_STEPS; step++) {
+    const covered = 0.5 - 0.5 * Math.cos((Math.PI * step) / REVEAL_STEPS);
+    const at = covered * (distances.length - 1);
+    const low = distances[Math.floor(at)];
+    const radius = step === REVEAL_STEPS ? farthest : low + (distances[Math.ceil(at)] - low) * (at - Math.floor(at));
+    frames.push(`circle(${radius.toFixed(1)}px at ${x}px ${y}px)`);
+  }
+  return frames;
 }
 
 // The theme lives on <html data-theme> (set before paint by the layout script); read it from there
 function subscribe(onChange: () => void) {
   const observer = new MutationObserver(onChange);
   observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
-  listeners.add(onChange);
-  return () => {
-    observer.disconnect();
-    listeners.delete(onChange);
-  };
+  return () => observer.disconnect();
 }
 const current = (): Theme => (document.documentElement.dataset.theme === "dark" ? "dark" : "light");
 const onServer = (): Theme | null => null;
@@ -36,12 +55,10 @@ const onServer = (): Theme | null => null;
 /** Round header button that switches light/dark and remembers the choice on this device. */
 export function ThemeToggle() {
   const theme = useSyncExternalStore(subscribe, current, onServer);
-  // Only spin the icon after a click, not on first paint
-  const [spinIcon, setSpinIcon] = useState(false);
 
   function toggle(event: MouseEvent<HTMLButtonElement>) {
     if (switching) return;
-    const next: Theme = theme === "dark" ? "light" : "dark";
+    const next: Theme = current() === "dark" ? "light" : "dark";
     try {
       localStorage.setItem(THEME_KEY, next);
     } catch {
@@ -49,13 +66,11 @@ export function ThemeToggle() {
     }
 
     const root = document.documentElement;
-    // Color transitions on buttons/links would lag behind the new theme, so they're paused for the switch
+    // Only attribute writes, so the new snapshot is ready right away; React catches up through subscribe.
+    // data-theme-switching pauses color transitions (they'd trail the new theme) and spins the new icon in.
     const update = () => {
       root.dataset.themeSwitching = "";
-      flushSync(() => {
-        setSpinIcon(true);
-        applyTheme(next);
-      });
+      applyTheme(next);
     };
     const done = () => {
       delete root.dataset.themeSwitching;
@@ -71,18 +86,20 @@ export function ThemeToggle() {
       return;
     }
 
+    // From the pointer when clicked, from the button's center when pressed with the keyboard
     const rect = event.currentTarget.getBoundingClientRect();
-    const x = rect.left + rect.width / 2;
-    const y = rect.top + rect.height / 2;
-    const radius = Math.hypot(Math.max(x, window.innerWidth - x), Math.max(y, window.innerHeight - y));
+    const fromPointer = event.detail > 0 && (event.clientX !== 0 || event.clientY !== 0);
+    const x = fromPointer ? event.clientX : rect.left + rect.width / 2;
+    const y = fromPointer ? event.clientY : rect.top + rect.height / 2;
+    const frames = revealFrames(x, y, window.innerWidth, window.innerHeight);
 
     switching = true;
     const transition = document.startViewTransition(update);
     transition.ready
       .then(() => {
         root.animate(
-          { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${radius}px at ${x}px ${y}px)`] },
-          { duration: REVEAL_MS, easing: REVEAL_EASING, pseudoElement: "::view-transition-new(root)" },
+          { clipPath: frames },
+          { duration: REVEAL_MS, easing: "linear", pseudoElement: "::view-transition-new(root)" },
         );
       })
       .catch(() => {});
@@ -99,7 +116,7 @@ export function ThemeToggle() {
       className="inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] transition duration-200 ease-out hover:bg-[var(--surface-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]"
     >
       {/* Hidden until mounted, so the icon never shows the wrong theme for a frame */}
-      <span key={theme} className={`flex ${theme ? "" : "invisible"} ${spinIcon ? "theme-icon-in" : ""}`} aria-hidden>
+      <span key={theme} className={`theme-icon flex ${theme ? "" : "invisible"}`} aria-hidden>
         {theme === "dark" ? <SunIcon /> : <MoonIcon />}
       </span>
     </button>
