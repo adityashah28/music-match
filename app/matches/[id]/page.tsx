@@ -378,7 +378,7 @@ export default function MatchDetailPage() {
                 </p>
                 <div className="mt-4">
                   <PrimaryButton size="compact" href={`/matches/${encodeURIComponent(match.userId)}/icebreaker`}>
-                    Start chatting
+                    {rounds.length > 0 ? "Continue chatting" : "Start chatting"}
                   </PrimaryButton>
                 </div>
               </GlassCard>
