@@ -225,7 +225,14 @@ export default function ShowsPage() {
                       ) : (
                         <div className="absolute inset-0" style={{ background: tone }} />
                       )}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-black/10" />
+                      <div
+                        aria-hidden
+                        className="absolute inset-0"
+                        style={{
+                          background:
+                            "linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.62) 35%, rgba(0,0,0,0.3) 65%, rgba(0,0,0,0) 100%)",
+                        }}
+                      />
                       <div className="relative flex min-h-[22rem] flex-col justify-end p-4 md:min-h-[26rem]">
                         <Link href={`/shows/${show.id}`} className="block min-h-11">
                           <h2 className="text-[36px] font-normal leading-[1.02] tracking-tight text-white">
