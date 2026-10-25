@@ -22,6 +22,9 @@ const GENRE_BONUS_CAP = 3;
 const STRONG_RATIO = 0.62;
 const GOOD_RATIO = 0.3;
 const MAX_MATCHES = 30;
+/** Added to a pair's score for each upcoming show both are "going" to (counted up to 2). */
+const SHOW_TOGETHER_BONUS = 0.8;
+const SHOWS_TOGETHER_COUNTED = 2;
 /** People only match within this distance of each other (75 miles). */
 const MATCH_RADIUS_KM = 120.7;
 
@@ -134,6 +137,13 @@ export function labelFor(ratio: number): { label: string; score: number } {
   if (clamped >= STRONG_RATIO) return { label: "Strong match", score };
   if (clamped >= GOOD_RATIO) return { label: "Good match", score };
   return { label: `${score}%`, score };
+}
+
+/** "You're both going to Phoebe Bridgers at Chase Center." */
+export function goingTogetherLine(show: Pick<StoredShow, "artistName" | "venue">): string {
+  return show.venue
+    ? `You're both going to ${show.artistName} at ${show.venue}.`
+    : `You're both going to ${show.artistName}.`;
 }
 
 export function whyLine(sharedNames: string[]): string {
@@ -293,6 +303,20 @@ export function buildMatches(
     shares.filter((edge) => edge.otherUserId === selfId).map((edge) => edge.userId),
   );
 
+  // Upcoming shows each person is "going" to, for the going-together boost
+  const upcoming = new Map(
+    showContext.shows
+      .filter((show) => !show.startsAt || Date.parse(show.startsAt) >= showContext.now - 6 * 60 * 60 * 1000)
+      .map((show) => [show.id, show]),
+  );
+  const goingTo = new Map<string, Set<string>>();
+  for (const rsvp of showContext.going) {
+    if (!upcoming.has(rsvp.showId)) continue;
+    if (!goingTo.has(rsvp.userId)) goingTo.set(rsvp.userId, new Set());
+    goingTo.get(rsvp.userId)!.add(rsvp.showId);
+  }
+  const mine = goingTo.get(selfId) ?? new Set<string>();
+
   const ranked = people
     .filter(
       (person) =>
@@ -308,21 +332,24 @@ export function buildMatches(
       // Dividing by your own list alone made every match shrink as you added artists.
       const otherScore = scorePair(person.artists, person.artists, weightOf, related).raw;
       const possible = Math.min(selfScore, otherScore);
-      const ratio = possible > 0 ? Math.min(1, pair.raw / possible) : 0;
-      return { person, pair, ratio };
+      // Both "going" to the same show is the strongest signal this app has: boost it
+      const together = [...(goingTo.get(person.id) ?? [])].filter((showId) => mine.has(showId));
+      const total = pair.raw + SHOW_TOGETHER_BONUS * Math.min(together.length, SHOWS_TOGETHER_COUNTED);
+      const ratio = possible > 0 ? Math.min(1, total / possible) : together.length > 0 ? 1 : 0;
+      return { person, pair, ratio, total, together };
     })
     .sort(
       (left, right) =>
         right.ratio - left.ratio ||
         // Equal ratios (e.g. two people whose whole lists sit inside yours): more and rarer overlap first
-        right.pair.raw - left.pair.raw ||
+        right.total - left.total ||
         right.pair.shared.length - left.pair.shared.length ||
         left.person.handle.localeCompare(right.person.handle),
     );
 
   const connected = ranked.filter(
     (entry) =>
-      entry.pair.shared.length > 0 || entry.pair.neighbor || entry.ratio >= GOOD_RATIO,
+      entry.pair.shared.length > 0 || entry.pair.neighbor || entry.together.length > 0 || entry.ratio >= GOOD_RATIO,
   );
   const chosen =
     connected.length > 0
@@ -351,7 +378,9 @@ export function buildMatches(
       isDemo: entry.person.isDemo,
       label,
       score,
-      why: whyLine(entry.pair.shared.map((artist) => artist.name)),
+      why: entry.together.length > 0
+        ? goingTogetherLine(upcoming.get(entry.together[0])!)
+        : whyLine(entry.pair.shared.map((artist) => artist.name)),
       sharedArtists: entry.pair.shared.map((artist) => ({
         name: artist.name,
         imageUrl: artist.imageUrl,
