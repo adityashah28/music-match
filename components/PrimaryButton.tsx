@@ -11,6 +11,10 @@ const sizeClass = {
   compact: "min-h-10 px-5 text-sm",
 };
 
+export function primaryButtonClass(size: keyof typeof sizeClass = "full") {
+  return `${buttonClass} ${sizeClass[size]}`;
+}
+
 function Label({ children }: { children: ReactNode }) {
   return <span className="btn-label">{children}</span>;
 }
@@ -36,7 +40,7 @@ export function PrimaryButton({
   size?: keyof typeof sizeClass;
   className?: string;
 }) {
-  const classes = `${buttonClass} ${sizeClass[size]}${className ? ` ${className}` : ""}${disabled ? " pointer-events-none opacity-40" : ""}`;
+  const classes = `${primaryButtonClass(size)}${className ? ` ${className}` : ""}${disabled ? " pointer-events-none opacity-40" : ""}`;
 
   if (href) {
     return (

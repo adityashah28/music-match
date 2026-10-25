@@ -11,6 +11,7 @@ import { MatchActions } from "@/components/MatchActions";
 import { MatchShowRow, sharedCount } from "@/components/MatchWhy";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { Skeleton } from "@/components/Skeleton";
+import { SocialLinks } from "@/components/SocialLinks";
 import {
   artistKey,
   fetchJson,
@@ -349,19 +350,8 @@ export default function MatchDetailPage() {
                     </ul>
                   </>
                 ) : links.length > 0 ? (
-                  <div className="mt-4 flex flex-col gap-2">
-                    <PrimaryButton href={links[0].href}>Open {links[0].label}</PrimaryButton>
-                    {links.slice(1).map((link) => (
-                      <a
-                        key={link.label}
-                        href={link.href}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex min-h-11 items-center justify-center text-base font-semibold text-[var(--foreground)]"
-                      >
-                        Open {link.label}
-                      </a>
-                    ))}
+                  <div className="mt-4">
+                    <SocialLinks links={links} />
                   </div>
                 ) : (
                   <p className="mt-2 text-base leading-snug text-[var(--muted)]">

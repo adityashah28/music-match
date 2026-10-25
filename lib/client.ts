@@ -243,15 +243,28 @@ function socialHref(value: string, base: string): string | null {
   return `${base}${handle}`;
 }
 
-export function socialLinks(socials: Socials): { label: string; href: string }[] {
-  const link = (value: string, label: string, base: string) => {
+export type SocialPlatform = keyof Socials;
+
+export type SocialLink = {
+  platform: SocialPlatform;
+  label: string;
+  href: string;
+  /** Null when they saved a full URL instead of a handle. */
+  handle: string | null;
+};
+
+export function socialLinks(socials: Socials): SocialLink[] {
+  const link = (platform: SocialPlatform, label: string, base: string): SocialLink[] => {
+    const value = socials[platform];
     const href = socialHref(value, base);
-    return href ? [{ label, href }] : [];
+    if (!href) return [];
+    const handle = normalizeSocialHandle(value);
+    return [{ platform, label, href, handle: /^https?:\/\//i.test(handle) ? null : handle }];
   };
   return [
-    ...link(socials.instagram, "Instagram", "https://instagram.com/"),
-    ...link(socials.tiktok, "TikTok", "https://www.tiktok.com/@"),
-    ...link(socials.snapchat, "Snapchat", "https://www.snapchat.com/add/"),
+    ...link("instagram", "Instagram", "https://instagram.com/"),
+    ...link("tiktok", "TikTok", "https://www.tiktok.com/@"),
+    ...link("snapchat", "Snapchat", "https://www.snapchat.com/add/"),
   ];
 }
 
