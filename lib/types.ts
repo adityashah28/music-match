@@ -40,6 +40,8 @@ export type UserPublic = {
 
 export type UserProfile = UserPublic & {
   phone: string | null;
+  /** Google profile picture, for profiles that signed in with Google. */
+  avatarUrl: string | null;
   ageMin: number | null;
   ageMax: number | null;
   cityLat: number | null;
@@ -57,6 +59,7 @@ export type CreateUserBody = {
   /** Set by the signup route from a verified Google sign-in, never from the request body. */
   authUserId?: string | null;
   email?: string | null;
+  avatarUrl?: string | null;
   name: string;
   handle: string;
   city: string;
@@ -163,6 +166,8 @@ export type MatchCard = {
   userId: string;
   name: string;
   handle: string;
+  /** Their Google profile picture, or null (phone-only and demo profiles): show initials then. */
+  avatarUrl: string | null;
   city: string;
   age: number | null;
   isDemo: boolean;
@@ -261,6 +266,7 @@ export type MatchPerson = {
   id: string;
   name: string;
   handle: string;
+  avatarUrl: string | null;
   city: string;
   age: number | null;
   ageMin: number | null;
@@ -292,6 +298,7 @@ export type StoredUser = {
   email: string | null;
   /** Supabase Auth user of the Google account this profile signed in with. */
   authUserId: string | null;
+  avatarUrl: string | null;
   city: string;
   cityLat: number | null;
   cityLng: number | null;

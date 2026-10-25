@@ -54,7 +54,13 @@ export async function phoneFromProof(proof: string): Promise<string | null> {
   return normalizePhone(`+${data.user.phone.replace(/^\+/, "")}`);
 }
 
-export type GoogleIdentity = { authUserId: string; email: string | null; name: string | null };
+export type GoogleIdentity = {
+  authUserId: string;
+  email: string | null;
+  name: string | null;
+  /** Google profile picture, or null if the account has none. */
+  avatarUrl: string | null;
+};
 
 /**
  * The Google account a proof belongs to (the Supabase access token from the browser's
@@ -69,5 +75,11 @@ export async function googleFromProof(proof: string): Promise<GoogleIdentity | n
   if (!viaGoogle) return null;
   const meta = user.user_metadata ?? {};
   const name = typeof meta.full_name === "string" ? meta.full_name : typeof meta.name === "string" ? meta.name : null;
-  return { authUserId: user.id, email: user.email ?? null, name };
+  const picture = typeof meta.avatar_url === "string" ? meta.avatar_url : typeof meta.picture === "string" ? meta.picture : null;
+  return { authUserId: user.id, email: user.email ?? null, name, avatarUrl: picture ? largerGooglePicture(picture) : null };
+}
+
+/** Google sends a 96px picture ("...=s96-c"); ask for 256px so it stays sharp on profile screens. */
+function largerGooglePicture(url: string): string {
+  return url.replace(/=s\d+-c$/, "=s256-c");
 }

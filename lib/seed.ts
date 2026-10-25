@@ -573,6 +573,7 @@ export function createSeed(): DataSnapshot {
       token: null,
       email: null,
       authUserId: null,
+      avatarUrl: null,
     };
     users.push(user);
     profile.artists.forEach((name, position) => {

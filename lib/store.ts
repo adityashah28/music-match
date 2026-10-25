@@ -102,6 +102,7 @@ function toPeople(snapshot: DataSnapshot): MatchPerson[] {
     id: user.id,
     name: user.name,
     handle: user.handle,
+    avatarUrl: user.avatarUrl,
     city: user.city,
     age: user.age,
     ageMin: user.ageMin,
@@ -141,6 +142,7 @@ function profileOf(snapshot: DataSnapshot, userId: string): UserProfile | null {
     city: person.city,
     age: person.age,
     phone: user.phone,
+    avatarUrl: user.avatarUrl,
     ageMin: user.ageMin,
     ageMax: user.ageMax,
     cityLat: user.cityLat,
@@ -282,6 +284,7 @@ async function insertUser(snapshot: DataSnapshot, body: CreateUserBody): Promise
     phone,
     email: body.email?.trim().slice(0, 254) || null,
     authUserId,
+    avatarUrl: authUserId ? body.avatarUrl?.trim() || null : null,
     city,
     cityLat: optionalCoord(body.cityLat),
     cityLng: optionalCoord(body.cityLng),
@@ -680,6 +683,7 @@ function mapUser(row: Record<string, unknown>): StoredUser {
     phone: text(row.phone),
     email: text(row.email),
     authUserId: text(row.auth_user_id),
+    avatarUrl: text(row.avatar_url),
     city: text(row.city) ?? "",
     cityLat: num(row.city_lat),
     cityLng: num(row.city_lng),
@@ -745,6 +749,7 @@ function userRow(user: StoredUser) {
     phone: user.phone,
     email: user.email,
     auth_user_id: user.authUserId,
+    avatar_url: user.avatarUrl,
     city: user.city,
     city_lat: user.cityLat,
     city_lng: user.cityLng,
@@ -810,6 +815,7 @@ function userChanged(before: StoredUser, after: StoredUser): boolean {
     before.phone !== after.phone ||
     before.email !== after.email ||
     before.authUserId !== after.authUserId ||
+    before.avatarUrl !== after.avatarUrl ||
     before.city !== after.city ||
     before.cityLat !== after.cityLat ||
     before.cityLng !== after.cityLng ||
@@ -1283,12 +1289,15 @@ export async function loginByPhone(phone: string): Promise<{ profile: UserProfil
  */
 export async function loginByAuthUser(
   authUserId: string,
+  avatarUrl: string | null = null,
 ): Promise<{ profile: UserProfile; token: string } | null> {
   try {
     return await edit(async (snapshot) => {
       const user = snapshot.users.find((row) => row.authUserId === authUserId);
       if (!user) return null;
       user.token ??= crypto.randomUUID();
+      // Keep the picture in step with the Google account (people change it)
+      if (avatarUrl) user.avatarUrl = avatarUrl;
       const profile = profileOf(snapshot, user.id);
       return profile ? { profile, token: user.token } : null;
     });

@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     // 400, not 401: the client treats 401 as "this device's profile is gone" and restarts onboarding
     if (!google) throw new StoreError(400, "Google sign-in didn’t work. Try again.");
 
-    const existing = await loginByAuthUser(google.authUserId);
+    const existing = await loginByAuthUser(google.authUserId, google.avatarUrl);
     if (existing) {
       return Response.json({ ok: true, isNew: false, user: existing.profile, token: existing.token });
     }
@@ -33,6 +33,7 @@ export async function POST(request: Request) {
       authProof: accessToken,
       name: google.name,
       email: google.email,
+      avatarUrl: google.avatarUrl,
     });
   } catch (error) {
     return errorResponse(error);

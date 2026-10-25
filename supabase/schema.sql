@@ -11,6 +11,8 @@ create table if not exists users (
   email text,
   -- Supabase Auth user that proved a Google account (Google sign-in); phone is optional for these users
   auth_user_id uuid,
+  -- Google profile picture, refreshed on each Google sign-in
+  avatar_url text,
   city text,
   city_lat double precision,
   city_lng double precision,

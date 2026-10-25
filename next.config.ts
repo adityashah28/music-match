@@ -27,6 +27,11 @@ const nextConfig: NextConfig = {
         hostname: "**.ticketm.net",
         pathname: "/**",
       },
+      // Google profile pictures (avatarUrl on profiles that signed in with Google)
+      {
+        protocol: "https",
+        hostname: "lh3.googleusercontent.com",
+      },
     ],
     // Portraits change rarely; cache optimized variants longer than the 4h default.
     minimumCacheTTL: 60 * 60 * 24 * 7,

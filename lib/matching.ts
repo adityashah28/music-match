@@ -316,6 +316,7 @@ export function buildMatches(
       userId: entry.person.id,
       name: entry.person.name || entry.person.handle,
       handle: entry.person.handle,
+      avatarUrl: entry.person.avatarUrl,
       city: entry.person.city,
       age: entry.person.age,
       isDemo: entry.person.isDemo,

@@ -74,6 +74,8 @@ export type MatchPerson = {
   userId: string;
   name: string;
   handle: string;
+  /** Google profile picture; undefined for phone-only and demo profiles (show initials). */
+  avatarUrl?: string;
   city: string;
   age: number | null;
   isDemo: boolean;
@@ -111,6 +113,8 @@ export type Profile = {
   id: string;
   name: string;
   handle: string;
+  /** Google profile picture; undefined if they didn't sign in with Google. */
+  avatarUrl?: string;
   city: string;
   age: number | null;
   ageMin: number | null;
@@ -490,6 +494,7 @@ export function normalizeMatch(value: unknown): MatchPerson | null {
     userId,
     name: text(row.name) ?? text(row.handle) ?? "Someone",
     handle: text(row.handle) ?? "Someone",
+    avatarUrl: text(row.avatarUrl),
     city: text(row.city) ?? "",
     age: typeof row.age === "number" ? row.age : null,
     isDemo: row.isDemo === true || row.is_demo === true,
@@ -575,6 +580,7 @@ export function normalizeProfile(value: unknown, fallbackId: string): Profile | 
     id: text(row.id) ?? fallbackId,
     name: text(row.name) ?? "",
     handle: text(row.handle) ?? "",
+    avatarUrl: text(row.avatarUrl),
     city: text(row.city) ?? "",
     age: typeof row.age === "number" ? row.age : null,
     ageMin: typeof row.ageMin === "number" ? row.ageMin : typeof row.age_min === "number" ? row.age_min : null,

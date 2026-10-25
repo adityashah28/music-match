@@ -58,6 +58,7 @@ export async function POST(request: Request) {
       phone,
       authUserId: google?.authUserId ?? null,
       email: google?.email ?? null,
+      avatarUrl: google?.avatarUrl ?? null,
       name: typeof json.name === "string" ? json.name : "",
       handle: typeof json.handle === "string" ? json.handle : "",
       city: typeof json.city === "string" ? json.city : "",
