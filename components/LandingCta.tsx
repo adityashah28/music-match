@@ -2,33 +2,46 @@
 
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 import { PrimaryButton } from "@/components/PrimaryButton";
-import { getDraft, getUserId } from "@/lib/client";
+import { clearDraft, getUserId } from "@/lib/client";
 
 /**
- * Same destination rules as SiteHeader:
- * guest → Get started /pick, signed-in → Continue /matches,
- * mid-draft → Continue /pick.
+ * Primary auth is Google. Phone OTP pages remain at /phone and /verify but
+ * are not linked from landing — kept for SMS-credit / internal testing.
+ * Returning home abandons any mid-draft so Continue with Google starts clean.
  */
 export function LandingCta() {
   const pathname = usePathname();
-  const [cta, setCta] = useState({ href: "/pick", label: "Get started" });
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     const userId = getUserId();
-    if (userId) {
-      setCta({ href: "/matches", label: "Continue" });
-      return;
+
+    // Leaving onboarding for home should not resume a later step.
+    if (!userId) {
+      clearDraft();
+      sessionStorage.removeItem("resonate_dev_otp");
     }
 
-    const draft = getDraft();
-    if (draft.artists.length > 0 || draft.handle.trim()) {
-      setCta({ href: "/pick", label: "Continue" });
-      return;
-    }
-
-    setCta({ href: "/pick", label: "Get started" });
+    setLoggedIn(Boolean(userId));
+    setReady(true);
   }, [pathname]);
 
-  return <PrimaryButton href={cta.href}>{cta.label}</PrimaryButton>;
+  if (!ready) {
+    return (
+      <div
+        className="font-sans inline-flex min-h-12 w-full items-center justify-center rounded-full bg-[var(--foreground)] px-6 opacity-40"
+        aria-hidden
+      />
+    );
+  }
+
+  // Old localStorage session would skip sign-in — clear it first.
+  if (loggedIn) {
+    return <PrimaryButton href="/logout">Get started</PrimaryButton>;
+  }
+
+  return <GoogleSignInButton variant="primary" />;
 }

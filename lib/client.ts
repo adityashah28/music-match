@@ -18,9 +18,22 @@ export type Socials = {
 };
 
 export type Draft = {
+  phone: string;
+  phoneVerified: boolean;
+  /** From /api/auth/verify; signup sends it back to prove the number. Expires after about an hour. */
+  phoneProof: string;
+  /** From Google sign-in (/api/auth/google); signup sends it back instead of a phone proof. Expires after about an hour. */
+  authProof: string;
+  name: string;
   artists: DraftArtist[];
   handle: string;
   city: string;
+  cityLat: number | null;
+  cityLng: number | null;
+  cityPlaceId: string | null;
+  age: number | null;
+  ageMin: number;
+  ageMax: number;
   instagram: string;
   tiktok: string;
   snapchat: string;
@@ -59,8 +72,10 @@ export type IcebreakerState = {
 
 export type MatchPerson = {
   userId: string;
+  name: string;
   handle: string;
   city: string;
+  age: number | null;
   isDemo: boolean;
   label: string;
   score?: number;
@@ -92,8 +107,15 @@ export type ShowItem = {
 
 export type Profile = {
   id: string;
+  name: string;
   handle: string;
   city: string;
+  age: number | null;
+  ageMin: number | null;
+  ageMax: number | null;
+  cityLat: number | null;
+  cityLng: number | null;
+  cityPlaceId: string | null;
   socials: Socials;
   artists: DraftArtist[];
 };
@@ -225,13 +247,32 @@ export function primarySocial(socials: Socials): { label: string; href: string }
 
 function blankDraft(): Draft {
   return {
+    phone: "",
+    phoneVerified: false,
+    phoneProof: "",
+    authProof: "",
+    name: "",
     artists: [],
     handle: "",
-    city: "Berkeley",
+    city: "",
+    cityLat: null,
+    cityLng: null,
+    cityPlaceId: null,
+    age: null,
+    ageMin: 18,
+    ageMax: 99,
     instagram: "",
     tiktok: "",
     snapchat: "",
   };
+}
+
+function numberOrNull(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function numberOr(value: unknown, fallback: number): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
 
 export function getDraft(): Draft {
@@ -248,9 +289,20 @@ export function getDraft(): Draft {
           .slice(0, 5)
       : [];
     return {
+      phone: typeof parsed.phone === "string" ? parsed.phone : "",
+      phoneVerified: parsed.phoneVerified === true,
+      phoneProof: typeof parsed.phoneProof === "string" ? parsed.phoneProof : "",
+      authProof: typeof parsed.authProof === "string" ? parsed.authProof : "",
+      name: typeof parsed.name === "string" ? parsed.name : "",
       artists,
       handle: typeof parsed.handle === "string" ? parsed.handle : "",
-      city: text(parsed.city) ?? "Berkeley",
+      city: text(parsed.city) ?? "",
+      cityLat: numberOrNull(parsed.cityLat),
+      cityLng: numberOrNull(parsed.cityLng),
+      cityPlaceId: text(parsed.cityPlaceId) ?? null,
+      age: numberOrNull(parsed.age),
+      ageMin: numberOr(parsed.ageMin, 18),
+      ageMax: numberOr(parsed.ageMax, 99),
       instagram: typeof parsed.instagram === "string" ? parsed.instagram : "",
       tiktok: typeof parsed.tiktok === "string" ? parsed.tiktok : "",
       snapchat: typeof parsed.snapchat === "string" ? parsed.snapchat : "",
@@ -264,9 +316,29 @@ export function setDraft(draft: Draft) {
   const next: Draft = {
     ...draft,
     artists: draft.artists.slice(0, 5),
-    city: draft.city.trim() || "Berkeley",
+    city: draft.city.trim(),
   };
   sessionStorage.setItem(DRAFT_KEY, JSON.stringify(next));
+}
+
+export function clearDraft() {
+  if (typeof window === "undefined") return;
+  sessionStorage.removeItem(DRAFT_KEY);
+}
+
+/** Has this draft proven who it is, by Google sign-in or by an SMS code? Gate onboarding steps on this. */
+export function isVerified(draft: Draft = getDraft()): boolean {
+  return Boolean(draft.authProof) || (draft.phoneVerified && Boolean(draft.phone));
+}
+
+/** Next unfinished onboarding step for a guest draft. */
+export function onboardingHref(draft: Draft = getDraft()): string {
+  // Google is primary; /phone and /verify still work if opened directly.
+  if (!isVerified(draft)) return "/";
+  if (!draft.name.trim() || !draft.handle.trim() || !draft.city.trim()) return "/about";
+  if (draft.age == null) return "/age";
+  if (draft.artists.length < 1) return "/pick";
+  return "/socials";
 }
 
 export function userPayload(draft: Draft) {
@@ -276,8 +348,18 @@ export function userPayload(draft: Draft) {
     snapchat: draft.snapchat.trim(),
   };
   return {
+    phone: draft.phone.trim(),
+    phoneProof: draft.phoneProof,
+    authProof: draft.authProof,
+    name: draft.name.trim(),
     handle: draft.handle.trim(),
-    city: draft.city.trim() || "Berkeley",
+    city: draft.city.trim(),
+    cityLat: draft.cityLat,
+    cityLng: draft.cityLng,
+    cityPlaceId: draft.cityPlaceId,
+    age: draft.age,
+    ageMin: draft.ageMin,
+    ageMax: draft.ageMax,
     instagram: socials.instagram,
     tiktok: socials.tiktok,
     snapchat: socials.snapchat,
@@ -291,8 +373,12 @@ export async function fetchJson(input: string, init?: RequestInit): Promise<unkn
   const headers = new Headers(init?.headers);
   if (token && input.startsWith("/api/")) headers.set("Authorization", `Bearer ${token}`);
   const response = await fetch(input, { ...init, headers });
-  // The server doesn't recognize this device's profile: start onboarding again
-  if (response.status === 401 && typeof window !== "undefined") {
+  // Dead session only — never bounce unauthenticated login/OTP flows home on 401.
+  if (
+    response.status === 401 &&
+    typeof window !== "undefined" &&
+    (getUserToken() || getUserId())
+  ) {
     clearUser();
     window.location.href = "/";
   }
@@ -387,8 +473,10 @@ export function normalizeMatch(value: unknown): MatchPerson | null {
   const socialSource = record(row.socials) ?? row;
   return {
     userId,
+    name: text(row.name) ?? text(row.handle) ?? "Someone",
     handle: text(row.handle) ?? "Someone",
     city: text(row.city) ?? "",
+    age: typeof row.age === "number" ? row.age : null,
     isDemo: row.isDemo === true || row.is_demo === true,
     label: text(row.label) ?? (score !== undefined ? percentLabel(score) : "Match"),
     score,
@@ -468,11 +556,41 @@ export function normalizeProfile(value: unknown, fallbackId: string): Profile | 
     : [];
   return {
     id: text(row.id) ?? fallbackId,
+    name: text(row.name) ?? "",
     handle: text(row.handle) ?? "",
-    city: text(row.city) ?? "Berkeley",
+    city: text(row.city) ?? "",
+    age: typeof row.age === "number" ? row.age : null,
+    ageMin: typeof row.ageMin === "number" ? row.ageMin : typeof row.age_min === "number" ? row.age_min : null,
+    ageMax: typeof row.ageMax === "number" ? row.ageMax : typeof row.age_max === "number" ? row.age_max : null,
+    cityLat:
+      typeof row.cityLat === "number" ? row.cityLat : typeof row.city_lat === "number" ? row.city_lat : null,
+    cityLng:
+      typeof row.cityLng === "number" ? row.cityLng : typeof row.city_lng === "number" ? row.city_lng : null,
+    cityPlaceId: text(row.cityPlaceId) ?? text(row.city_place_id) ?? null,
     socials: normalizeSocials(record(row.socials) ?? row),
     artists,
   };
+}
+
+export async function searchCities(query: string): Promise<
+  Array<{ id: string; label: string; city: string; lat: number; lng: number }>
+> {
+  const data = await fetchJson(`/api/cities/search?q=${encodeURIComponent(query)}`);
+  const row = record(data);
+  const raw = Array.isArray(data) ? data : row && Array.isArray(row.cities) ? row.cities : [];
+  return raw
+    .map((item) => {
+      const city = record(item);
+      if (!city) return null;
+      const id = text(city.id);
+      const label = text(city.label);
+      const name = text(city.city);
+      const lat = typeof city.lat === "number" ? city.lat : null;
+      const lng = typeof city.lng === "number" ? city.lng : null;
+      if (!id || !label || !name || lat == null || lng == null) return null;
+      return { id, label, city: name, lat, lng };
+    })
+    .filter((item): item is { id: string; label: string; city: string; lat: number; lng: number } => item !== null);
 }
 
 export function normalizeCrowd(value: unknown): CrowdSnapshot {
@@ -629,4 +747,43 @@ export async function searchArtists(query: string): Promise<DraftArtist[]> {
   const row = record(data);
   const raw = Array.isArray(data) ? data : row && Array.isArray(row.artists) ? row.artists : [];
   return raw.map(normalizeArtist).filter((artist): artist is DraftArtist => artist !== null);
+}
+
+/**
+ * "Continue with Google": leaves the app for Google, which returns to /auth/callback.
+ * Throws if Google sign-in isn't configured; show a message and offer another way in.
+ */
+export async function startGoogleSignIn(): Promise<void> {
+  const { startGoogle } = await import("./supabase-browser");
+  await startGoogle();
+}
+
+/**
+ * Call once on /auth/callback. Returns "existing" when the Google account already has a
+ * profile (now logged in on this device: go to /matches) or "new" (the draft now holds the
+ * Google proof and a prefilled name: continue to onboardingHref()). Throws if sign-in failed.
+ */
+export async function completeGoogleSignIn(): Promise<"existing" | "new"> {
+  const { finishGoogle } = await import("./supabase-browser");
+  const accessToken = await finishGoogle();
+  const data = await fetchJson("/api/auth/google", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ accessToken }),
+  });
+  const row = record(data);
+  const user = record(row?.user);
+  const userId = text(user?.id);
+  const token = text(row?.token);
+  if (row?.isNew === false && userId && token) {
+    setUserId(userId);
+    setUserToken(token);
+    clearDraft();
+    return "existing";
+  }
+  const authProof = text(row?.authProof);
+  if (!authProof) throw new Error("Google sign-in didn't finish");
+  const draft = getDraft();
+  setDraft({ ...draft, authProof, name: draft.name || text(row?.name) || "" });
+  return "new";
 }

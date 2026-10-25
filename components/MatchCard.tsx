@@ -26,7 +26,7 @@ export function MatchCard({
     <GlassCard className="p-0">
       <Link
         href={href}
-        className="block rounded-t-[var(--radius)] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--foreground)]"
+        className="block cursor-pointer rounded-t-[var(--radius)] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--foreground)]"
       >
         <div className="relative h-40 bg-[var(--surface-soft)]">
           {cover ? (
@@ -41,15 +41,19 @@ export function MatchCard({
           ) : null}
           <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
           {match.isDemo ? (
-            <span className="absolute right-3 top-3 rounded-full border border-white/40 bg-black/30 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white">
-              demo
+            <span className="pill absolute right-3 top-3 border border-white/40 bg-black/30 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white">
+              <span className="chip-label">demo</span>
             </span>
           ) : null}
           <div className="absolute inset-x-4 bottom-3">
             <p className="truncate text-[2rem] font-semibold leading-none tracking-tight text-white">
-              {match.handle}
+              {match.name || match.handle}
             </p>
-            {match.city ? <p className="mt-1 truncate text-sm font-normal text-white/80">{match.city}</p> : null}
+            <p className="mt-1 truncate text-sm font-normal text-white/80">
+              {[match.handle !== match.name ? `@${match.handle}` : null, match.age != null ? String(match.age) : null, match.city]
+                .filter(Boolean)
+                .join(" · ")}
+            </p>
           </div>
         </div>
         <div className="px-4 pt-4">

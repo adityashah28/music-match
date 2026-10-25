@@ -2,11 +2,22 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { AgeNumberInput } from "@/components/AgeNumberInput";
+import { MatchOffsetControl } from "@/components/MatchOffsetControl";
 import { ArtistChip, ArtistResult } from "@/components/ArtistChip";
 import { GlassCard } from "@/components/GlassCard";
 import { GradientBackground } from "@/components/GradientBackground";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { Skeleton } from "@/components/Skeleton";
+import { CityAutocomplete, type CityValue } from "@/components/CityAutocomplete";
+import {
+  clampAge,
+  clampOlderOffset,
+  clampYoungerOffset,
+  defaultMatchOffsets,
+  matchRangeFromOffsets,
+  offsetsFromMatchRange,
+} from "@/lib/age";
 import {
   artistKey,
   fetchJson,
@@ -24,8 +35,19 @@ export default function MePage() {
   const [reload, setReload] = useState(0);
   const [profileId, setProfileId] = useState("");
 
+  const [name, setName] = useState("");
   const [handle, setHandle] = useState("");
-  const [city, setCity] = useState("");
+  const [city, setCity] = useState<CityValue>({
+    city: "",
+    label: "",
+    lat: null,
+    lng: null,
+    placeId: null,
+  });
+  const initialOffsets = defaultMatchOffsets(24);
+  const [age, setAge] = useState(24);
+  const [younger, setYounger] = useState(initialOffsets.younger);
+  const [older, setOlder] = useState(initialOffsets.older);
   const [instagram, setInstagram] = useState("");
   const [tiktok, setTiktok] = useState("");
   const [snapchat, setSnapchat] = useState("");
@@ -63,8 +85,20 @@ export default function MePage() {
           setError(true);
           return;
         }
+        setName(profile.name);
         setHandle(profile.handle);
-        setCity(profile.city);
+        setCity({
+          city: profile.city,
+          label: profile.city,
+          lat: profile.cityLat,
+          lng: profile.cityLng,
+          placeId: profile.cityPlaceId,
+        });
+        const nextAge = profile.age != null ? clampAge(profile.age) : 24;
+        const offsets = offsetsFromMatchRange(nextAge, profile.ageMin, profile.ageMax);
+        setAge(nextAge);
+        setYounger(offsets.younger);
+        setOlder(offsets.older);
         setInstagram(profile.socials.instagram);
         setTiktok(profile.socials.tiktok);
         setSnapchat(profile.socials.snapchat);
@@ -146,9 +180,26 @@ export default function MePage() {
       router.replace("/");
       return;
     }
-    const nextHandle = handle.trim();
+    const nextName = name.trim();
+    const nextHandle = handle.trim().replace(/^@+/, "");
+    if (!nextName) {
+      setSaveError("Add your name.");
+      setSaved(false);
+      return;
+    }
     if (!nextHandle) {
-      setSaveError("Add a handle so people know who you are.");
+      setSaveError("Add a username so people know who you are.");
+      setSaved(false);
+      return;
+    }
+    if (!city.city.trim()) {
+      setSaveError("Add your city.");
+      setSaved(false);
+      return;
+    }
+    const range = matchRangeFromOffsets(age, younger, older);
+    if (range.min > range.max) {
+      setSaveError("Age range is backwards.");
       setSaved(false);
       return;
     }
@@ -158,8 +209,15 @@ export default function MePage() {
     setSaved(false);
 
     const next = {
+      name: nextName,
       handle: nextHandle,
-      city: city.trim() || "Berkeley",
+      city: city.city.trim(),
+      cityLat: city.lat,
+      cityLng: city.lng,
+      cityPlaceId: city.placeId,
+      age: clampAge(age),
+      ageMin: range.min,
+      ageMax: range.max,
       instagram: instagram.trim(),
       tiktok: tiktok.trim(),
       snapchat: snapchat.trim(),
@@ -174,18 +232,26 @@ export default function MePage() {
       });
       const profile = normalizeProfile(data, id);
       if (profile) {
+        setName(profile.name);
         setHandle(profile.handle);
-        setCity(profile.city);
+        setCity({
+          city: profile.city,
+          label: profile.city,
+          lat: profile.cityLat,
+          lng: profile.cityLng,
+          placeId: profile.cityPlaceId,
+        });
+        if (profile.age != null) {
+          const nextAge = clampAge(profile.age);
+          const offsets = offsetsFromMatchRange(nextAge, profile.ageMin, profile.ageMax);
+          setAge(nextAge);
+          setYounger(offsets.younger);
+          setOlder(offsets.older);
+        }
         setInstagram(profile.socials.instagram);
         setTiktok(profile.socials.tiktok);
         setSnapchat(profile.socials.snapchat);
         setArtists(profile.artists);
-      } else {
-        setHandle(next.handle);
-        setCity(next.city);
-        setInstagram(next.instagram);
-        setTiktok(next.tiktok);
-        setSnapchat(next.snapchat);
       }
       setSaved(true);
     } catch {
@@ -205,7 +271,7 @@ export default function MePage() {
           Profile
         </h1>
         <p className="mt-3 text-base font-normal leading-snug text-[var(--muted)]">
-          Handle, city, socials, and up to five artists.
+          Name, username, city, age, socials, and artists.
         </p>
 
         {loading ? (
@@ -230,22 +296,76 @@ export default function MePage() {
           <div className="mt-6 flex flex-col gap-4">
             <GlassCard className="flex flex-col gap-5 p-5">
               <Field
-                id="handle"
-                label="Handle"
-                value={handle}
-                onChange={edit(setHandle)}
-                placeholder="maya"
-                autoComplete="nickname"
-              />
-              <Field
-                id="city"
-                label="City"
-                value={city}
-                onChange={edit(setCity)}
-                placeholder="Berkeley"
-                autoComplete="address-level2"
+                id="name"
+                label="Name"
+                value={name}
+                onChange={edit(setName)}
+                placeholder="Maya"
+                autoComplete="name"
                 capitalize
               />
+              <div>
+                <label className="block text-sm font-normal text-[var(--muted)]" htmlFor="handle">
+                  Username
+                </label>
+                <div className="field mt-2 flex min-h-12 w-full items-center pl-5 pr-4">
+                  <span className="field-prefix text-base font-normal text-[var(--muted)]" aria-hidden="true">
+                    {"@"}
+                  </span>
+                  <input
+                    id="handle"
+                    value={handle}
+                    onChange={(event) => {
+                      setSaved(false);
+                      setHandle(event.target.value.replace(/^@+/, "").replace(/\s+/g, ""));
+                    }}
+                    placeholder="maya"
+                    autoComplete="username"
+                    autoCapitalize="none"
+                    spellCheck={false}
+                    className="min-w-0 flex-1 w-auto text-base font-normal placeholder:text-[var(--muted)]"
+                  />
+                </div>
+              </div>
+              <CityAutocomplete
+                className="mt-0"
+                value={city}
+                onChange={(next) => {
+                  setSaved(false);
+                  setCity(next);
+                }}
+              />
+              <section>
+                <label className="block text-sm font-normal text-[var(--muted)]" htmlFor="age">
+                  Your age
+                </label>
+                <div className="mt-3 flex justify-center">
+                  <AgeNumberInput
+                    id="age"
+                    value={age}
+                    onChange={(next) => {
+                      setSaved(false);
+                      setAge(next);
+                      setYounger((y) => clampYoungerOffset(next, y));
+                      setOlder((o) => clampOlderOffset(next, o));
+                    }}
+                  />
+                </div>
+              </section>
+              <section>
+                <p className="text-sm font-normal text-[var(--muted)]">Match me with</p>
+                <MatchOffsetControl
+                  className="mt-3"
+                  age={age}
+                  younger={younger}
+                  older={older}
+                  onChange={({ younger: y, older: o }) => {
+                    setSaved(false);
+                    setYounger(y);
+                    setOlder(o);
+                  }}
+                />
+              </section>
             </GlassCard>
 
             <GlassCard className="flex flex-col gap-5 p-5">
@@ -313,13 +433,17 @@ export default function MePage() {
               {notice ? <p className="mt-3 text-sm text-[var(--muted)]">{notice}</p> : null}
               {searchError ? <p className="mt-3 text-sm text-[var(--muted)]">{searchError}</p> : null}
 
-              <div className="mt-3 flex flex-col gap-2">
-                {searching ? (
-                  <div className="flex flex-col gap-2" aria-busy="true">
+              <div
+                className={`mt-3 flex flex-col gap-2 ${searching && results.length > 0 ? "opacity-70" : ""}`}
+                aria-busy={searching || undefined}
+              >
+                {/* Keep prior hits visible while fetching — never stack skeletons on top. */}
+                {searching && results.length === 0 ? (
+                  <>
                     <span className="sr-only">Searching</span>
                     <Skeleton className="h-11 w-full rounded-full" />
                     <Skeleton className="h-11 w-full rounded-full" />
-                  </div>
+                  </>
                 ) : null}
                 {!searching && query.trim() && results.length === 0 && !searchError ? (
                   <p className="py-3 text-sm text-[var(--muted)]">
@@ -353,6 +477,12 @@ export default function MePage() {
             <PrimaryButton onClick={save} disabled={saving}>
               {saving ? "Saving…" : "Save"}
             </PrimaryButton>
+            <a
+              href="/logout"
+              className="font-sans inline-flex min-h-11 w-full cursor-pointer items-center justify-center text-center text-base font-normal leading-none text-[var(--muted)] transition duration-200 ease-out hover:text-[var(--foreground)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]"
+            >
+              <span className="btn-label">Sign out</span>
+            </a>
           </div>
         ) : null}
       </main>
@@ -399,16 +529,18 @@ function Field({
       <label className="block text-sm font-normal text-[var(--muted)]" htmlFor={id}>
         {label}
       </label>
-      <input
-        id={id}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder={placeholder}
-        autoComplete={autoComplete}
-        autoCapitalize={capitalize ? "words" : "none"}
-        autoCorrect="off"
-        className="field mt-2 min-h-12 w-full px-4 text-base font-normal outline-none placeholder:text-[var(--muted)]"
-      />
+      <div className="field mt-2 flex min-h-12 w-full items-center px-4">
+        <input
+          id={id}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={placeholder}
+          autoComplete={autoComplete}
+          autoCapitalize={capitalize ? "words" : "none"}
+          autoCorrect="off"
+          className="text-base font-normal placeholder:text-[var(--muted)]"
+        />
+      </div>
     </div>
   );
 }

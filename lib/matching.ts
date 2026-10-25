@@ -1,3 +1,4 @@
+import { agesCompatible } from "./age";
 import { normalizeName } from "./normalize";
 import type {
   IcebreakerState,
@@ -272,7 +273,12 @@ export function buildMatches(
   );
 
   const ranked = people
-    .filter((person) => person.id !== selfId && !skipped.has(person.id))
+    .filter(
+      (person) =>
+        person.id !== selfId &&
+        !skipped.has(person.id) &&
+        agesCompatible(self.age, self.ageMin, self.ageMax, person.age, person.ageMin, person.ageMax),
+    )
     .map((person) => {
       const pair = scorePair(self.artists, person.artists, weightOf, related);
       const ratio = selfScore > 0 ? Math.min(1, pair.raw / selfScore) : 0;
@@ -308,8 +314,10 @@ export function buildMatches(
     );
     return {
       userId: entry.person.id,
+      name: entry.person.name || entry.person.handle,
       handle: entry.person.handle,
       city: entry.person.city,
+      age: entry.person.age,
       isDemo: entry.person.isDemo,
       label,
       score,

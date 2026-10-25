@@ -81,7 +81,7 @@ export default function WelcomePage() {
               </h1>
             </div>
             <div
-              className="cta-hover hero-rise relative z-10 mx-auto mt-7 w-full max-w-[17.5rem] md:mt-8"
+              className="cta-hover hero-rise relative z-10 mx-auto mt-7 w-full max-w-[18rem] md:mt-8"
               style={{ animationDelay: "0.56s" }}
             >
               <LandingCta />

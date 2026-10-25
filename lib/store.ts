@@ -100,8 +100,12 @@ function toPeople(snapshot: DataSnapshot): MatchPerson[] {
   const artists = new Map(snapshot.artists.map((artist) => [artist.id, artist]));
   return snapshot.users.map((user) => ({
     id: user.id,
+    name: user.name,
     handle: user.handle,
     city: user.city,
+    age: user.age,
+    ageMin: user.ageMin,
+    ageMax: user.ageMax,
     isDemo: user.isDemo,
     instagram: user.instagram,
     tiktok: user.tiktok,
@@ -127,12 +131,21 @@ function toPeople(snapshot: DataSnapshot): MatchPerson[] {
 }
 
 function profileOf(snapshot: DataSnapshot, userId: string): UserProfile | null {
+  const user = snapshot.users.find((entry) => entry.id === userId);
   const person = toPeople(snapshot).find((entry) => entry.id === userId);
-  if (!person) return null;
+  if (!user || !person) return null;
   return {
     id: person.id,
+    name: person.name,
     handle: person.handle,
     city: person.city,
+    age: person.age,
+    phone: user.phone,
+    ageMin: user.ageMin,
+    ageMax: user.ageMax,
+    cityLat: user.cityLat,
+    cityLng: user.cityLng,
+    cityPlaceId: user.cityPlaceId,
     instagram: person.instagram,
     tiktok: person.tiktok,
     snapchat: person.snapchat,
@@ -146,6 +159,21 @@ function profileOf(snapshot: DataSnapshot, userId: string): UserProfile | null {
       position: artist.position,
     })),
   };
+}
+
+function requireAge(value: unknown, label: string): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    throw new StoreError(400, `${label} is required`);
+  }
+  const age = Math.round(value);
+  if (age < 18 || age > 99) throw new StoreError(400, `${label} must be between 18 and 99`);
+  return age;
+}
+
+function optionalCoord(value: unknown): number | null {
+  if (value == null) return null;
+  if (typeof value !== "number" || !Number.isFinite(value)) return null;
+  return value;
 }
 
 function showSummary(show: StoredShow, rsvp: RsvpStatus | null): ShowSummary {
@@ -218,12 +246,36 @@ async function replaceArtists(snapshot: DataSnapshot, userId: string, inputs: Ar
 }
 
 async function insertUser(snapshot: DataSnapshot, body: CreateUserBody): Promise<string> {
+  // A profile signs in with a verified phone number or a verified Google account
+  const authUserId = body.authUserId?.trim() || null;
+  const phone = authUserId ? body.phone?.trim() || null : required(body.phone, "Phone", 20);
+  if (phone && snapshot.users.some((row) => row.phone === phone)) {
+    throw new StoreError(409, "An account already exists for this phone number");
+  }
+  if (authUserId && snapshot.users.some((row) => row.authUserId === authUserId)) {
+    throw new StoreError(409, "An account already exists for this Google account");
+  }
+  const name = required(body.name, "Name", 80);
   const handle = required(body.handle, "Handle", 32);
   const city = required(body.city, "City", 80);
+  const age = requireAge(body.age, "Age");
+  const ageMin = requireAge(body.ageMin, "Youngest age");
+  const ageMax = requireAge(body.ageMax, "Oldest age");
+  if (ageMin > ageMax) throw new StoreError(400, "Age range is backwards");
   const user: StoredUser = {
     id: crypto.randomUUID(),
+    name,
     handle,
+    phone,
+    email: body.email?.trim().slice(0, 254) || null,
+    authUserId,
     city,
+    cityLat: optionalCoord(body.cityLat),
+    cityLng: optionalCoord(body.cityLng),
+    cityPlaceId: typeof body.cityPlaceId === "string" ? body.cityPlaceId.trim().slice(0, 120) || null : null,
+    age,
+    ageMin,
+    ageMax,
     instagram: cleanSocial(body.instagram),
     tiktok: cleanSocial(body.tiktok),
     snapchat: cleanSocial(body.snapchat),
@@ -239,8 +291,21 @@ async function insertUser(snapshot: DataSnapshot, body: CreateUserBody): Promise
 async function patchUser(snapshot: DataSnapshot, id: string, body: UpdateUserBody) {
   const user = snapshot.users.find((row) => row.id === id);
   if (!user) throw new StoreError(404, "User not found");
+  if (body.name !== undefined) user.name = required(body.name, "Name", 80);
   if (body.handle !== undefined) user.handle = required(body.handle, "Handle", 32);
   if (body.city !== undefined) user.city = required(body.city, "City", 80);
+  if (body.cityLat !== undefined) user.cityLat = optionalCoord(body.cityLat);
+  if (body.cityLng !== undefined) user.cityLng = optionalCoord(body.cityLng);
+  if (body.cityPlaceId !== undefined) {
+    user.cityPlaceId =
+      typeof body.cityPlaceId === "string" ? body.cityPlaceId.trim().slice(0, 120) || null : null;
+  }
+  if (body.age !== undefined) user.age = requireAge(body.age, "Age");
+  if (body.ageMin !== undefined) user.ageMin = requireAge(body.ageMin, "Youngest age");
+  if (body.ageMax !== undefined) user.ageMax = requireAge(body.ageMax, "Oldest age");
+  if (user.ageMin != null && user.ageMax != null && user.ageMin > user.ageMax) {
+    throw new StoreError(400, "Age range is backwards");
+  }
   if (body.instagram !== undefined) user.instagram = cleanSocial(body.instagram);
   if (body.tiktok !== undefined) user.tiktok = cleanSocial(body.tiktok);
   if (body.snapchat !== undefined) user.snapchat = cleanSocial(body.snapchat);
@@ -587,11 +652,25 @@ function text(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value : null;
 }
 
+function num(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
 function mapUser(row: Record<string, unknown>): StoredUser {
   return {
     id: String(row.id),
+    name: text(row.name) ?? "",
     handle: text(row.handle) ?? "",
+    phone: text(row.phone),
+    email: text(row.email),
+    authUserId: text(row.auth_user_id),
     city: text(row.city) ?? "",
+    cityLat: num(row.city_lat),
+    cityLng: num(row.city_lng),
+    cityPlaceId: text(row.city_place_id),
+    age: num(row.age),
+    ageMin: num(row.age_min),
+    ageMax: num(row.age_max),
     instagram: text(row.instagram),
     tiktok: text(row.tiktok),
     snapchat: text(row.snapchat),
@@ -644,8 +723,18 @@ function mapShow(row: Record<string, unknown>): StoredShow {
 function userRow(user: StoredUser) {
   return {
     id: user.id,
+    name: user.name,
     handle: user.handle,
+    phone: user.phone,
+    email: user.email,
+    auth_user_id: user.authUserId,
     city: user.city,
+    city_lat: user.cityLat,
+    city_lng: user.cityLng,
+    city_place_id: user.cityPlaceId,
+    age: user.age,
+    age_min: user.ageMin,
+    age_max: user.ageMax,
     instagram: user.instagram,
     tiktok: user.tiktok,
     snapchat: user.snapchat,
@@ -698,12 +787,23 @@ function artistChanged(before: StoredArtist, after: StoredArtist): boolean {
 
 function userChanged(before: StoredUser, after: StoredUser): boolean {
   return (
+    before.name !== after.name ||
     before.handle !== after.handle ||
+    before.phone !== after.phone ||
+    before.email !== after.email ||
+    before.authUserId !== after.authUserId ||
     before.city !== after.city ||
+    before.cityLat !== after.cityLat ||
+    before.cityLng !== after.cityLng ||
+    before.cityPlaceId !== after.cityPlaceId ||
+    before.age !== after.age ||
+    before.ageMin !== after.ageMin ||
+    before.ageMax !== after.ageMax ||
     before.instagram !== after.instagram ||
     before.tiktok !== after.tiktok ||
     before.snapchat !== after.snapchat ||
-    before.isDemo !== after.isDemo
+    before.isDemo !== after.isDemo ||
+    before.token !== after.token
   );
 }
 
@@ -1069,6 +1169,16 @@ function filled(snapshot: DataSnapshot): DataSnapshot {
   if (!Array.isArray(snapshot.skips)) snapshot.skips = [];
   if (!Array.isArray(snapshot.icebreakers)) snapshot.icebreakers = [];
   if (!Array.isArray(snapshot.shares)) snapshot.shares = [];
+  for (const user of snapshot.users) {
+    if (typeof user.name !== "string") user.name = user.handle || "";
+    if (user.phone === undefined) user.phone = null;
+    if (user.cityLat === undefined) user.cityLat = null;
+    if (user.cityLng === undefined) user.cityLng = null;
+    if (user.cityPlaceId === undefined) user.cityPlaceId = null;
+    if (user.age === undefined) user.age = null;
+    if (user.ageMin === undefined) user.ageMin = null;
+    if (user.ageMax === undefined) user.ageMax = null;
+  }
   return snapshot;
 }
 
@@ -1111,6 +1221,58 @@ export async function createUser(body: CreateUserBody): Promise<CreatedUser> {
 export async function userIdForToken(token: string): Promise<string | null> {
   try {
     return await repo().userIdForToken(token);
+  } catch (error) {
+    throw wrap(error);
+  }
+}
+
+export async function findUserByPhone(phone: string): Promise<UserProfile | null> {
+  try {
+    const normalized = phone.trim();
+    if (!normalized) return null;
+    return await read((snapshot) => {
+      const user = snapshot.users.find((row) => row.phone === normalized);
+      return user ? profileOf(snapshot, user.id) : null;
+    });
+  } catch (error) {
+    throw wrap(error);
+  }
+}
+
+/**
+ * Log a verified phone number into its profile: returns the profile and its token, or null if
+ * no profile has that number. Only call after the number's ownership is proven (SMS code).
+ * Uses a fresh load, not the read cache, so a signup from another server instance is found.
+ */
+export async function loginByPhone(phone: string): Promise<{ profile: UserProfile; token: string } | null> {
+  try {
+    return await edit(async (snapshot) => {
+      const user = snapshot.users.find((row) => row.phone === phone.trim());
+      if (!user) return null;
+      user.token ??= crypto.randomUUID();
+      const profile = profileOf(snapshot, user.id);
+      return profile ? { profile, token: user.token } : null;
+    });
+  } catch (error) {
+    throw wrap(error);
+  }
+}
+
+/**
+ * Log a verified Google sign-in into its profile: returns the profile and its token, or null if
+ * no profile is linked to that Supabase Auth user. Fresh load, like loginByPhone.
+ */
+export async function loginByAuthUser(
+  authUserId: string,
+): Promise<{ profile: UserProfile; token: string } | null> {
+  try {
+    return await edit(async (snapshot) => {
+      const user = snapshot.users.find((row) => row.authUserId === authUserId);
+      if (!user) return null;
+      user.token ??= crypto.randomUUID();
+      const profile = profileOf(snapshot, user.id);
+      return profile ? { profile, token: user.token } : null;
+    });
   } catch (error) {
     throw wrap(error);
   }

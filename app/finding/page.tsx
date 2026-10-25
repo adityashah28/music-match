@@ -4,8 +4,9 @@ import { useEffect, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import { ArtistChip } from "@/components/ArtistChip";
 import { BackLink } from "@/components/BackLink";
+import { FindingProgress, FINDING_MS } from "@/components/OnboardingProgress";
 import { GradientBackground } from "@/components/GradientBackground";
-import { artistKey, getDraft, getUserId, type DraftArtist } from "@/lib/client";
+import { artistKey, clearDraft, getDraft, getUserId, type DraftArtist } from "@/lib/client";
 
 export default function FindingPage() {
   const router = useRouter();
@@ -22,16 +23,16 @@ export default function FindingPage() {
     setArtists(draft.artists);
     setReady(true);
 
-    const reduce =
-      typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduce) {
+    // Clear only when this screen actually leaves. A sync clear runs twice in
+    // Strict Mode, and the second pass would read an empty draft before chips paint.
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const done = window.setTimeout(() => {
+      clearDraft();
       router.push("/matches");
-      return;
-    }
+    }, reduce ? 0 : FINDING_MS);
 
-    const done = setTimeout(() => router.push("/matches"), 1500);
     return () => {
-      clearTimeout(done);
+      window.clearTimeout(done);
     };
   }, [router]);
 
@@ -57,12 +58,14 @@ export default function FindingPage() {
               </li>
             ))}
           </ul>
-          <h1 className="font-display text-[40px] font-normal leading-[1.02] tracking-tight text-[var(--foreground)]">
+          <p className="text-sm font-normal text-[var(--muted)]">Profile saved</p>
+          <h1 className="mt-2 font-display text-[40px] font-normal leading-[1.02] tracking-tight text-[var(--foreground)]">
             Finding matches
           </h1>
           <p className="mt-3 max-w-xs text-base font-normal leading-snug text-[var(--muted)]">
             {ready ? "Looking for shared artists." : "One sec."}
           </p>
+          <FindingProgress />
         </div>
       </main>
     </GradientBackground>

@@ -8,55 +8,20 @@ import { normalizeName } from "@/lib/normalize";
 import { supabase } from "./lib/db";
 import { getDeezerRelated, searchDeezerArtists } from "./lib/deezer";
 import { fillMissingColors, saveDeezerArtists } from "./lib/artists";
+import {
+  BANDSINTOWN_CITIES,
+  fromBandsintownItems,
+  fromSongkickItems,
+  pacific,
+  saveShows,
+  show,
+  type ShowRow,
+} from "@/lib/shows-import";
 
 const APIFY_TOKEN = process.env.APIFY_TOKEN?.trim();
 const TICKETMASTER_KEY = process.env.TICKETMASTER_KEY?.trim();
 const BAY_AREA_DMA = 382; // Ticketmaster's market id for San Francisco / Oakland / San Jose
-const BANDSINTOWN_CITIES: Record<string, string> = {
-  "san-francisco-ca": "San Francisco",
-  "oakland-ca": "Oakland",
-  "san-jose-ca": "San Jose",
-};
-const SOURCE_PRIORITY = ["ticketmaster", "bandsintown", "songkick"];
-
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-type ShowRow = {
-  source: string;
-  source_id: string;
-  artist_name: string;
-  normalized_artist_name: string;
-  venue: string | null;
-  city: string | null;
-  starts_at: string;
-  ticket_url: string | null;
-  image_url: string | null;
-  updated_at: string;
-};
-
-// Bandsintown and Songkick give local Bay Area times without an offset ("2026-11-05T19:00:00").
-// Attach the correct Pacific offset for that date (PST or PDT).
-function pacific(local: string): string {
-  const base = local.slice(0, 19);
-  const offset = new Intl.DateTimeFormat("en-US", { timeZone: "America/Los_Angeles", timeZoneName: "longOffset" })
-    .formatToParts(new Date(`${base}Z`))
-    .find((p) => p.type === "timeZoneName")
-    ?.value.replace("GMT", "");
-  return `${base}${offset || "-08:00"}`;
-}
-
-// Same artist, same local day = same show
-function dedupeKey(row: Pick<ShowRow, "normalized_artist_name" | "starts_at">): string {
-  const day = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Los_Angeles" }).format(new Date(row.starts_at));
-  return `${row.normalized_artist_name}|${day}`;
-}
-
-function show(fields: Omit<ShowRow, "normalized_artist_name" | "updated_at">): ShowRow | null {
-  const normalized = normalizeName(fields.artist_name);
-  if (!normalized || !fields.starts_at || Number.isNaN(Date.parse(fields.starts_at))) return null;
-  if (Date.parse(fields.starts_at) < Date.now()) return null;
-  return { ...fields, normalized_artist_name: normalized, updated_at: new Date().toISOString() };
-}
 
 async function runApify(actor: string, input: object): Promise<Record<string, unknown>[]> {
   const res = await fetch(`https://api.apify.com/v2/acts/${actor}/run-sync-get-dataset-items?timeout=300`, {
@@ -73,47 +38,16 @@ async function fromBandsintown(): Promise<ShowRow[]> {
   for (const [citySlug, city] of Object.entries(BANDSINTOWN_CITIES)) {
     // maxItems 0 is documented as "no limit" but returns nothing, so cap it explicitly
     const items = await runApify("aitorsm~bandsintown-events", { citySlug, maxItems: 150 });
-    for (const e of items as Record<string, string>[]) {
-      const row = show({
-        source: "bandsintown",
-        source_id: String(e.eventId),
-        artist_name: e.artistName,
-        venue: e.venueName ?? null,
-        city,
-        starts_at: e.startsAt ? pacific(e.startsAt) : "",
-        ticket_url: e.ticketUrl ?? e.eventUrl ?? null,
-        image_url: e.imageUrl ?? null,
-      });
-      if (row) rows.push(row);
-    }
+    rows.push(...fromBandsintownItems(items));
     console.log(`  Bandsintown ${city}: ${items.length} events`);
   }
   return rows;
 }
 
 async function fromSongkick(): Promise<ShowRow[]> {
-  type SongkickEvent = {
-    eventId: string; url?: string; image?: string; startDate?: string;
-    venueName?: string; addressLocality?: string; performers?: { name: string }[];
-  };
-  const items = (await runApify("aitorsm~songkick-events", { city: "San Francisco", maxItems: 200 })) as SongkickEvent[];
+  const items = await runApify("aitorsm~songkick-events", { city: "San Francisco", maxItems: 200 });
   console.log(`  Songkick: ${items.length} events`);
-  return items.flatMap((e) => {
-    const headliner = e.performers?.[0]?.name;
-    const row = headliner
-      ? show({
-          source: "songkick",
-          source_id: String(e.eventId),
-          artist_name: headliner,
-          venue: e.venueName ?? null,
-          city: e.addressLocality ?? "San Francisco",
-          starts_at: e.startDate ? pacific(e.startDate) : "",
-          ticket_url: e.url ?? null,
-          image_url: e.image ?? null,
-        })
-      : null;
-    return row ? [row] : [];
-  });
+  return fromSongkickItems(items);
 }
 
 type TicketmasterEvent = {
@@ -211,33 +145,8 @@ async function main() {
     return [];
   });
 
-  // Shows already in the table win their slot, so re-runs never create a second copy from another source
-  const { data: existing } = await supabase.from("shows").select("source, source_id, normalized_artist_name, starts_at");
-  const taken = new Map<string, string>(); // dedupe key -> "source|source_id" that owns it
-  for (const s of existing ?? []) {
-    if (s.starts_at) taken.set(dedupeKey(s), `${s.source}|${s.source_id}`);
-  }
-
-  // Stable sort keeps each source's own order (Ticketmaster per-artist matches stay ahead of its general list)
-  const winners = new Map<string, ShowRow>();
-  const usedEvents = new Set<string>(); // one row per source event, even if listed under two artist names
-  for (const row of candidates.sort((a, b) => SOURCE_PRIORITY.indexOf(a.source) - SOURCE_PRIORITY.indexOf(b.source))) {
-    const key = dedupeKey(row);
-    const event = `${row.source}|${row.source_id}`;
-    const owner = taken.get(key);
-    if (owner && owner !== event) continue;
-    if (winners.has(key) || usedEvents.has(event)) continue;
-    winners.set(key, row);
-    usedEvents.add(event);
-  }
-  const rows = [...winners.values()];
-
-  for (let i = 0; i < rows.length; i += 200) {
-    const { error: upsertError } = await supabase
-      .from("shows")
-      .upsert(rows.slice(i, i + 200), { onConflict: "source,source_id" });
-    if (upsertError) throw new Error(upsertError.message);
-  }
+  // Shared with the Apify webhook: one show per artist per day, existing rows keep their slot
+  const rows = await saveShows(supabase, candidates);
   console.log(`\nSaved ${rows.length} shows (${candidates.length} found before removing duplicates).`);
 
   // Look up show artists we don't know yet, so they get photos and related artists

@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
+import { createClient } from "@supabase/supabase-js";
 import { errorResponse, readJson } from "@/lib/errors";
-import { upsertFromApify } from "@/lib/store";
+import { fromBandsintownItems, fromSongkickItems, saveShows } from "@/lib/shows-import";
 
 export const dynamic = "force-dynamic";
 
@@ -46,8 +47,18 @@ export async function POST(request: Request) {
       return Response.json({ error: "Wrong or missing webhook secret" }, { status: 401 });
     }
     const payload = await readJson(request);
-    await upsertFromApify(await datasetItems(payload));
-    return Response.json({ ok: true });
+    const data = await datasetItems(payload);
+    const items = Array.isArray(data) ? (data as Record<string, unknown>[]) : [];
+
+    // Same mapping and same-artist-same-day dedupe as the shows seed, so scheduled runs
+    // update the seeded Bandsintown/Songkick rows instead of adding copies
+    const candidates = [...fromBandsintownItems(items), ...fromSongkickItems(items)];
+    const url = (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL)?.trim();
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+    if (!url || !key) return skipped("Supabase is not configured");
+    const saved = await saveShows(createClient(url, key, { auth: { persistSession: false } }), candidates);
+
+    return Response.json({ ok: true, items: items.length, saved: saved.length });
   } catch (error) {
     return errorResponse(error);
   }

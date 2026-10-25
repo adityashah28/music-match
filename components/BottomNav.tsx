@@ -4,7 +4,18 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 
-const HIDDEN = new Set(["/", "/pick", "/about", "/socials", "/finding"]);
+const HIDDEN = new Set([
+  "/",
+  "/phone",
+  "/verify",
+  "/about",
+  "/age",
+  "/pick",
+  "/socials",
+  "/finding",
+  "/auth/callback",
+  "/logout",
+]);
 const HIDDEN_SUFFIXES = ["/icebreaker"];
 
 const ITEMS = [
@@ -38,10 +49,10 @@ export function BottomNav() {
               key={href}
               href={href}
               aria-current={active ? "page" : undefined}
-              className={`flex min-h-11 min-w-14 flex-col items-center justify-center gap-0.5 rounded-full px-3 text-[11px] font-normal ${
+              className={`flex min-h-11 min-w-14 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-full px-3 text-[11px] font-normal transition duration-200 ease-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)] ${
                 active
                   ? "bg-[var(--surface-soft)] text-[var(--foreground)]"
-                  : "text-[var(--muted)]"
+                  : "text-[var(--muted)] hover:bg-[var(--surface-soft)] hover:text-[var(--foreground)]"
               }`}
             >
               <Icon />
