@@ -14,6 +14,7 @@ import {
   getDraft,
   getUserId,
   isVerified,
+  normalizeSocialHandle,
   setDraft,
   setUserId,
   setUserToken,
@@ -42,9 +43,9 @@ export default function SocialsPage() {
       router.replace("/pick");
       return;
     }
-    setInstagram(draft.instagram);
-    setTiktok(draft.tiktok);
-    setSnapchat(draft.snapchat);
+    setInstagram(normalizeSocialHandle(draft.instagram));
+    setTiktok(normalizeSocialHandle(draft.tiktok));
+    setSnapchat(normalizeSocialHandle(draft.snapchat));
   }, [router]);
 
   async function submit(skip: boolean) {
@@ -73,9 +74,9 @@ export default function SocialsPage() {
 
     const next: Draft = {
       ...draft,
-      instagram: skip ? "" : instagram.trim(),
-      tiktok: skip ? "" : tiktok.trim(),
-      snapchat: skip ? "" : snapchat.trim(),
+      instagram: skip ? "" : normalizeSocialHandle(instagram),
+      tiktok: skip ? "" : normalizeSocialHandle(tiktok),
+      snapchat: skip ? "" : normalizeSocialHandle(snapchat),
     };
     setDraft(next);
     setBusy(true);
@@ -163,15 +164,21 @@ function SocialField({
       <label className="mt-5 block text-sm font-normal text-[var(--muted)]" htmlFor={id}>
         {label}
       </label>
-      <div className="field mt-2 flex min-h-12 w-full items-center px-4">
+      <div className="field mt-2 flex min-h-12 w-full items-center pl-5 pr-4">
+        <span className="field-prefix text-base font-normal text-[var(--muted)]" aria-hidden="true">
+          {"@"}
+        </span>
         <input
           id={id}
           value={value}
-          onChange={(event) => onChange(event.target.value)}
-          placeholder="@you"
+          onChange={(event) => onChange(normalizeSocialHandle(event.target.value))}
+          onBlur={() => onChange(normalizeSocialHandle(value))}
+          placeholder="you"
           autoCapitalize="none"
           autoCorrect="off"
-          className="text-base font-normal placeholder:text-[var(--muted)]"
+          autoComplete="off"
+          spellCheck={false}
+          className="min-w-0 flex-1 w-auto text-base font-normal placeholder:text-[var(--muted)]"
         />
       </div>
     </>
