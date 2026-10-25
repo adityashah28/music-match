@@ -8,6 +8,7 @@ import { GradientBackground } from "@/components/GradientBackground";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { RsvpControl } from "@/components/RsvpControl";
 import { Skeleton } from "@/components/Skeleton";
+import { VenueLink } from "@/components/VenueLink";
 import {
   fetchJson,
   formatWhen,
@@ -128,9 +129,7 @@ export default function ShowDetailPage() {
             <h1 className="font-display text-[44px] font-normal leading-[0.98] tracking-tight text-[var(--foreground)]">
               {show.artistName}
             </h1>
-            <p className="mt-3 text-base font-normal text-[var(--muted)]">
-              {[show.venue, show.city].filter(Boolean).join(" · ") || "Venue TBA"}
-            </p>
+            <VenueLink venue={show.venue} city={show.city} className="mt-3 text-base font-normal text-[var(--muted)]" />
             <p className="mt-1 text-base font-normal text-[var(--muted)]">{formatWhen(show.startsAt)}</p>
             {show.ticketUrl ? (
               <a

@@ -9,6 +9,7 @@ import { GradientBackground } from "@/components/GradientBackground";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { RsvpControl } from "@/components/RsvpControl";
 import { Skeleton } from "@/components/Skeleton";
+import { VenueLink } from "@/components/VenueLink";
 import {
   fetchJson,
   formatWhen,
@@ -250,13 +251,14 @@ export default function ShowsPage() {
                         }}
                       />
                       <div className="relative flex min-h-[22rem] flex-col justify-end p-4 md:min-h-[26rem]">
-                        <Link href={`/shows/${show.id}`} className="block min-h-11">
+                        <Link href={`/shows/${show.id}`} className="block">
                           <h2 className="text-[36px] font-normal leading-[1.02] tracking-tight text-white">
                             {show.artistName}
                           </h2>
-                          <p className="mt-1 text-sm font-normal text-white/80">
-                            {[show.venue, show.city].filter(Boolean).join(" · ") || "Venue TBA"}
-                          </p>
+                        </Link>
+                        {/* Its own link (to Google Maps), so it sits outside the link to the show page */}
+                        <VenueLink venue={show.venue} city={show.city} className="mt-1 text-sm font-normal text-white/80" />
+                        <Link href={`/shows/${show.id}`} className="block">
                           <p className="mt-1 text-sm font-normal text-white/65">{formatWhen(show.startsAt)}</p>
                         </Link>
                         {show.ticketUrl ? (

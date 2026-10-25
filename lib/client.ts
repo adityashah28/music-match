@@ -784,6 +784,8 @@ export function formatWhen(value: string) {
   if (!value) return "Date TBA";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
+  // Ticketmaster lists shows whose time isn't announced yet at midnight: show just the date
+  if (date.getHours() === 0 && date.getMinutes() === 0) return formatDay(value);
   return new Intl.DateTimeFormat("en", {
     weekday: "short",
     month: "short",
@@ -791,6 +793,13 @@ export function formatWhen(value: string) {
     hour: "numeric",
     minute: "2-digit",
   }).format(date);
+}
+
+/** Google Maps search for a venue (opens the Maps app on phones), or null without a venue. */
+export function mapsUrl(venue: string | null | undefined, city: string | null | undefined): string | null {
+  const place = [venue, city].map((part) => part?.trim()).filter(Boolean).join(", ");
+  if (!venue?.trim()) return null;
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place)}`;
 }
 
 export async function searchArtists(query: string): Promise<DraftArtist[]> {
