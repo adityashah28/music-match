@@ -281,12 +281,18 @@ export function buildMatches(
     )
     .map((person) => {
       const pair = scorePair(self.artists, person.artists, weightOf, related);
-      const ratio = selfScore > 0 ? Math.min(1, pair.raw / selfScore) : 0;
+      // Score against the smaller of the two lists: the most overlap these two could have.
+      // Dividing by your own list alone made every match shrink as you added artists.
+      const otherScore = scorePair(person.artists, person.artists, weightOf, related).raw;
+      const possible = Math.min(selfScore, otherScore);
+      const ratio = possible > 0 ? Math.min(1, pair.raw / possible) : 0;
       return { person, pair, ratio };
     })
     .sort(
       (left, right) =>
         right.ratio - left.ratio ||
+        // Equal ratios (e.g. two people whose whole lists sit inside yours): more and rarer overlap first
+        right.pair.raw - left.pair.raw ||
         right.pair.shared.length - left.pair.shared.length ||
         left.person.handle.localeCompare(right.person.handle),
     );
