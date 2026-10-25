@@ -408,7 +408,9 @@ export async function fetchJson(input: string, init?: RequestInit): Promise<unkn
     data = null;
   }
   if (!response.ok) {
-    throw new Error("request failed");
+    const row = record(data);
+    const message = text(row?.error) || text(row?.message) || "request failed";
+    throw new Error(message);
   }
   return data;
 }

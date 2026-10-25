@@ -20,7 +20,13 @@ export default function AuthCallbackPage() {
       .then((result) => router.replace(result === "existing" ? "/matches" : onboardingHref()))
       .catch((err: unknown) => {
         console.error("Google sign-in failed", err);
-        setError("Google sign-in didn’t finish. Try again.");
+        const detail = err instanceof Error ? err.message.trim() : "";
+        // Keep the friendly headline; surface a short actionable detail when we have one.
+        setError(
+          detail && detail !== "request failed"
+            ? detail
+            : "Google sign-in didn’t finish. Try again.",
+        );
       });
   }, [router]);
 

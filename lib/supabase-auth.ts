@@ -10,11 +10,13 @@ import { normalizePhone } from "@/lib/phone";
 let client: SupabaseClient | null = null;
 
 function auth() {
-  const url = (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL)?.trim();
+  // Prefer the same public URL the browser uses for Google OAuth so access tokens validate.
+  // A mismatched SUPABASE_URL (different project) makes exchange succeed client-side then fail here.
+  const url = (process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL)?.trim();
   const key = (
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
     process.env.SUPABASE_ANON_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-    process.env.SUPABASE_SERVICE_ROLE_KEY
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   )?.trim();
   if (!url || !key) throw new StoreError(503, "Phone login isn't set up yet");
   client ??= createClient(url, key, {
@@ -62,6 +64,17 @@ export type GoogleIdentity = {
   avatarUrl: string | null;
 };
 
+function isGoogleUser(user: {
+  identities?: { provider?: string }[] | null;
+  app_metadata?: Record<string, unknown> | null;
+}): boolean {
+  if ((user.identities ?? []).some((identity) => identity.provider === "google")) return true;
+  const meta = user.app_metadata ?? {};
+  if (meta.provider === "google") return true;
+  const providers = meta.providers;
+  return Array.isArray(providers) && providers.includes("google");
+}
+
 /**
  * The Google account a proof belongs to (the Supabase access token from the browser's
  * Google sign-in), or null if the proof is invalid, expired, or not from Google.
@@ -70,9 +83,14 @@ export async function googleFromProof(proof: string): Promise<GoogleIdentity | n
   if (!proof) return null;
   const { data, error } = await auth().getUser(proof);
   const user = data?.user;
-  if (error || !user) return null;
-  const viaGoogle = (user.identities ?? []).some((identity) => identity.provider === "google");
-  if (!viaGoogle) return null;
+  if (error || !user) {
+    if (error) console.error("googleFromProof getUser failed:", error.message);
+    return null;
+  }
+  if (!isGoogleUser(user)) {
+    console.error("googleFromProof: user is not a Google identity", user.id);
+    return null;
+  }
   const meta = user.user_metadata ?? {};
   const name = typeof meta.full_name === "string" ? meta.full_name : typeof meta.name === "string" ? meta.name : null;
   const picture = typeof meta.avatar_url === "string" ? meta.avatar_url : typeof meta.picture === "string" ? meta.picture : null;

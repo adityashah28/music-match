@@ -29,16 +29,36 @@ export async function startGoogle(): Promise<void> {
   if (error) throw error;
 }
 
+function stripAuthParamsFromUrl() {
+  const url = new URL(window.location.href);
+  if (!url.searchParams.has("code") && !url.searchParams.has("error")) return;
+  url.search = "";
+  window.history.replaceState({}, "", url.pathname);
+}
+
 /** On /auth/callback: trades the code in the URL for Supabase's access token (the proof). */
 export async function finishGoogle(): Promise<string> {
+  const client = supabase();
   const params = new URLSearchParams(window.location.search);
   const failure = params.get("error_description") ?? params.get("error");
   if (failure) throw new Error(failure);
+
   const code = params.get("code");
-  if (!code) throw new Error("Google didn't send a sign-in code back");
-  const { data, error } = await supabase().auth.exchangeCodeForSession(code);
-  if (error || !data.session) throw error ?? new Error("Google sign-in didn't finish");
-  return data.session.access_token;
+  if (code) {
+    const { data, error } = await client.auth.exchangeCodeForSession(code);
+    if (error || !data.session) {
+      throw new Error(error?.message || "Google sign-in didn't finish");
+    }
+    stripAuthParamsFromUrl();
+    return data.session.access_token;
+  }
+
+  // Remount after we stripped ?code=: reuse the session from the exchange above.
+  const existing = await client.auth.getSession();
+  if (existing.data.session?.access_token) {
+    return existing.data.session.access_token;
+  }
+  throw new Error("Google didn't send a sign-in code back");
 }
 
 /** Clears any Google/Supabase browser session (no-op when env isn’t configured). */
