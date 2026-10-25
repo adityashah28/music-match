@@ -131,7 +131,7 @@ export default function IcebreakerPage() {
   const bubbleClass = (mine: boolean) =>
     `inline-flex max-w-[85%] items-center rounded-[var(--radius)] px-4 py-2.5 text-base leading-snug ${
       mine
-        ? "bg-[var(--foreground)] text-white"
+        ? "bg-[var(--foreground)] text-[var(--on-foreground)]"
         : "border border-[var(--border)] bg-[var(--surface-soft)] text-[var(--foreground)]"
     }`;
 

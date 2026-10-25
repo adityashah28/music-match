@@ -254,7 +254,7 @@ export default function MatchDetailPage() {
                 <p className="text-lg font-semibold leading-snug text-[var(--foreground)]">
                   {sharedCount(match.sharedArtists.length)}
                 </p>
-                <span className="pill shrink-0 bg-[var(--foreground)] px-2.5 py-1 text-xs font-normal text-white">
+                <span className="pill shrink-0 bg-[var(--foreground)] px-2.5 py-1 text-xs font-normal text-[var(--on-foreground)]">
                   <span className="chip-label">{match.label}</span>
                 </span>
               </div>
@@ -364,7 +364,7 @@ export default function MatchDetailPage() {
                     {latestLine ?? "Pick a prompt to break the ice"}
                   </p>
                   {waitingOnYou ? (
-                    <span className="mt-3 inline-flex rounded-full bg-[var(--foreground)] px-2.5 py-1 text-xs font-normal text-white">
+                    <span className="mt-3 inline-flex rounded-full bg-[var(--foreground)] px-2.5 py-1 text-xs font-normal text-[var(--on-foreground)]">
                       Reply
                     </span>
                   ) : null}

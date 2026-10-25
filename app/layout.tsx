@@ -45,9 +45,12 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
+  // Light by default; ThemeToggle updates the bar color when someone switches to dark
   themeColor: "#f4f5f7",
-  colorScheme: "light",
+  colorScheme: "light dark",
 };
+
+const THEME_SCRIPT = `try{var t=localStorage.getItem("resonate_theme");if(t!=="dark")t="light";document.documentElement.dataset.theme=t}catch(e){document.documentElement.dataset.theme="light"}`;
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
@@ -56,6 +59,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${khula.variable} ${instrumentSerif.variable} h-full antialiased`}
       suppressHydrationWarning
     >
+      <head>
+        {/* Apply a saved dark-mode choice before first paint so it never flashes white.
+            Light is the default; dark only after someone picks it with the toggle. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       <body
         className={`${khula.className} min-h-dvh text-[var(--foreground)]`}
         suppressHydrationWarning

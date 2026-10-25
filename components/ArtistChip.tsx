@@ -35,7 +35,7 @@ export function ArtistChip({
           aria-label={`Remove ${name}`}
           className="group absolute -right-2 -top-2 grid h-11 w-11 cursor-pointer place-items-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]"
         >
-          <span className="grid h-6 w-6 place-items-center rounded-full bg-[var(--foreground)] text-base leading-none text-white transition duration-200 ease-out group-hover:bg-neutral-700">
+          <span className="grid h-6 w-6 place-items-center rounded-full bg-[var(--foreground)] text-base leading-none text-[var(--on-foreground)] transition duration-200 ease-out group-hover:bg-[var(--foreground-hover)]">
             <span className="btn-label">×</span>
           </span>
         </button>

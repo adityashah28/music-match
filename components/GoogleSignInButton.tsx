@@ -7,10 +7,10 @@ import { isInAppBrowser, preferredExternalBrowser } from "@/lib/inAppBrowser";
 import { InAppBrowserNotice } from "@/components/InAppBrowserNotice";
 
 const primaryClass =
-  "font-sans inline-flex min-h-12 w-full cursor-pointer items-center justify-center gap-2.5 rounded-full bg-[var(--foreground)] px-6 text-center text-base font-normal leading-none text-white transition duration-200 ease-out hover:bg-neutral-700 active:scale-[0.99] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)] disabled:pointer-events-none disabled:opacity-40";
+  "font-sans inline-flex min-h-12 w-full cursor-pointer items-center justify-center gap-2.5 rounded-full bg-[var(--foreground)] px-6 text-center text-base font-normal leading-none text-[var(--on-foreground)] transition duration-200 ease-out hover:bg-[var(--foreground-hover)] active:scale-[0.99] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)] disabled:pointer-events-none disabled:opacity-40";
 
 const headerClass =
-  "font-sans inline-flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-full bg-[var(--foreground)] px-4 text-center text-sm font-normal leading-none text-white transition duration-200 ease-out hover:bg-neutral-700 active:scale-[0.99] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)] disabled:pointer-events-none disabled:opacity-40";
+  "font-sans inline-flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-full bg-[var(--foreground)] px-4 text-center text-sm font-normal leading-none text-[var(--on-foreground)] transition duration-200 ease-out hover:bg-[var(--foreground-hover)] active:scale-[0.99] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)] disabled:pointer-events-none disabled:opacity-40";
 
 type Props = {
   /** Visual size — landing uses full-width primary; header uses compact. */

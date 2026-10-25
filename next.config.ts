@@ -27,6 +27,16 @@ const nextConfig: NextConfig = {
         hostname: "**.ticketm.net",
         pathname: "/**",
       },
+      // Show images from Bandsintown (media., assets.prod.) and Songkick, for shows without a Deezer photo.
+      // Without these, next/image throws and the whole Shows page crashes.
+      {
+        protocol: "https",
+        hostname: "**.bandsintown.com",
+      },
+      {
+        protocol: "https",
+        hostname: "images.sk-static.com",
+      },
       // Google profile pictures (avatarUrl on profiles that signed in with Google)
       {
         protocol: "https",

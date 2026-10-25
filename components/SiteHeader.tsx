@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 import { clearDraft, getDraft, getUserId, isVerified, onboardingHref } from "@/lib/client";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const APP_NAV = [
   { href: "/matches", label: "Matches" },
@@ -91,7 +92,7 @@ export function SiteHeader() {
     return (
       <Link
         href={cta.href}
-        className={`font-sans min-h-10 cursor-pointer items-center justify-center rounded-full bg-[var(--foreground)] px-4 text-center text-sm font-normal leading-none text-white transition duration-200 ease-out hover:bg-neutral-700 active:scale-[0.99] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)] ${
+        className={`font-sans min-h-10 cursor-pointer items-center justify-center rounded-full bg-[var(--foreground)] px-4 text-center text-sm font-normal leading-none text-[var(--on-foreground)] transition duration-200 ease-out hover:bg-[var(--foreground-hover)] active:scale-[0.99] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)] ${
           opts.mobile
             ? "mt-1 inline-flex min-h-11 w-full"
             : nav.length > 0
@@ -120,7 +121,9 @@ export function SiteHeader() {
           Resonate
         </Link>
 
-        {isLanding || isOnboarding ? null : (
+        {isLanding || isOnboarding ? (
+          <ThemeToggle />
+        ) : (
           <>
             {nav.length > 0 ? (
               <nav aria-label="Site" className="hidden items-center gap-6 md:flex">
@@ -148,6 +151,7 @@ export function SiteHeader() {
             ) : null}
 
             <div className="flex items-center gap-2">
+              <ThemeToggle />
               {renderCta({})}
 
               {nav.length > 0 ? (

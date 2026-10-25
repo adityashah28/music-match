@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import Link from "next/link";
 import { GlassCard } from "@/components/GlassCard";
 import { MatchActions } from "@/components/MatchActions";
@@ -36,6 +37,13 @@ function textTone(hex: string): string {
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
+/** Lightens a tone toward white for text on dark mode's dark card, keeping the hue. */
+function lightTextTone(hex: string): string {
+  const n = Number.parseInt(hex.slice(1), 16);
+  const lift = (channel: number) => Math.round(channel + (255 - channel) * 0.4).toString(16).padStart(2, "0");
+  return `#${lift((n >> 16) & 255)}${lift((n >> 8) & 255)}${lift(n & 255)}`;
+}
+
 export function MatchCard({
   match,
   href,
@@ -52,7 +60,9 @@ export function MatchCard({
   const lead = match.sharedArtists[0];
   const tone = hexTone(lead?.color ?? portraitFor(lead?.name)?.color);
   // Percentage labels read as "not quite a match" — keep those neutral; only color-code a real label.
-  const strengthColor = match.label.endsWith("%") ? null : textTone(tone);
+  const strengthColor = match.label.endsWith("%") ? null : "var(--tone-label)";
+  // Both versions of the tone; globals.css .tone-scope picks the one for the current theme
+  const toneVars = { "--tone-on-light": textTone(tone), "--tone-on-dark": lightTextTone(tone) } as CSSProperties;
 
   return (
     <GlassCard className="p-0">
@@ -78,7 +88,7 @@ export function MatchCard({
             </p>
           </div>
         </div>
-        <div className="px-4 pt-4">
+        <div className="tone-scope px-4 pt-4" style={toneVars}>
           <MatchWhy
             label={match.label}
             labelColor={strengthColor}

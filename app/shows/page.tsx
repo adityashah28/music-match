@@ -160,7 +160,7 @@ export default function ShowsPage() {
                   onClick={() => setGenre(selected ? "" : option.id)}
                   className={`min-h-9 shrink-0 cursor-pointer rounded-full border px-4 text-sm font-normal transition ${
                     selected
-                      ? "border-[var(--foreground)] bg-[var(--foreground)] text-white"
+                      ? "border-[var(--foreground)] bg-[var(--foreground)] text-[var(--on-foreground)]"
                       : "border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] hover:border-[var(--foreground)]"
                   }`}
                 >
@@ -209,7 +209,7 @@ export default function ShowsPage() {
             ) : (
               filteredShows.map((show) => {
                 const photo = photoFor(show.artistName, show.imageUrl);
-                const tone = show.color ?? portraitFor(show.artistName)?.color ?? "#eceef2";
+                const tone = show.color ?? portraitFor(show.artistName)?.color ?? "var(--surface-soft)";
                 return (
                   <article key={show.id} className="panel overflow-hidden">
                     <div className="relative min-h-[22rem] md:min-h-[26rem]">
