@@ -34,19 +34,19 @@ export function BottomNav() {
   return (
     <div
       className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center px-4 md:hidden"
-      style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
+      style={{ paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))" }}
     >
       <nav
         aria-label="Primary"
-        className="pointer-events-auto relative flex w-fit items-center gap-1.5 border border-[var(--border)] bg-[var(--surface)] p-2.5"
+        className="pointer-events-auto relative flex w-fit items-center gap-1 border border-[var(--border)] bg-[var(--surface)] p-2"
         style={{ borderRadius: 999 }}
       >
         <span
           aria-hidden="true"
-          className={`absolute left-2.5 top-2.5 h-13 w-22 rounded-full bg-[var(--surface-soft)] transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${
+          className={`absolute left-2 top-2 h-12 w-20 rounded-full bg-[var(--surface-soft)] transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${
             activeIndex < 0 ? "opacity-0" : "opacity-100"
           }`}
-          style={{ transform: `translateX(calc(${Math.max(activeIndex, 0)} * (100% + 0.375rem)))` }}
+          style={{ transform: `translateX(calc(${Math.max(activeIndex, 0)} * (100% + 0.25rem)))` }}
         />
         {ITEMS.map(({ href, label, icon: Icon }, index) => {
           const active = index === activeIndex;
@@ -55,12 +55,12 @@ export function BottomNav() {
               key={href}
               href={href}
               aria-current={active ? "page" : undefined}
-              className={`relative flex h-13 w-22 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-full font-normal transition-colors duration-200 ease-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)] ${
+              className={`relative flex h-12 w-20 cursor-pointer flex-col items-center justify-center gap-1 rounded-full font-normal transition-colors duration-200 ease-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)] ${
                 active ? "text-[var(--foreground)]" : "text-[var(--muted)] hover:text-[var(--foreground)]"
               }`}
             >
               <Icon />
-              <span className="btn-label text-[11px] leading-none tracking-[0.02em]">{label}</span>
+              <span className="btn-label text-[10px] leading-none tracking-[0.02em]">{label}</span>
             </Link>
           );
         })}
@@ -74,7 +74,7 @@ function IconFrame({ children }: { children: ReactNode }) {
     <svg
       viewBox="0 0 24 24"
       aria-hidden="true"
-      className="h-5 w-5"
+      className="h-[1.125rem] w-[1.125rem]"
       fill="none"
       stroke="currentColor"
       strokeWidth="1.75"
