@@ -31,6 +31,8 @@ export function BottomNav() {
     return null;
   }
 
+  const activeIndex = ITEMS.findIndex(({ href }) => pathname === href || pathname.startsWith(`${href}/`));
+
   return (
     <div
       className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center px-4 md:hidden"
@@ -38,24 +40,29 @@ export function BottomNav() {
     >
       <nav
         aria-label="Primary"
-        className="pointer-events-auto flex w-fit items-center gap-1 border border-[var(--border)] bg-[var(--surface)] px-2 py-2"
+        className="pointer-events-auto relative flex w-fit items-center gap-1.5 border border-[var(--border)] bg-[var(--surface)] p-2.5"
         style={{ borderRadius: 999 }}
       >
-        {ITEMS.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href || pathname.startsWith(`${href}/`);
+        <span
+          aria-hidden="true"
+          className={`absolute left-2.5 top-2.5 h-13 w-22 rounded-full bg-[var(--surface-soft)] transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${
+            activeIndex < 0 ? "opacity-0" : "opacity-100"
+          }`}
+          style={{ transform: `translateX(calc(${Math.max(activeIndex, 0)} * (100% + 0.375rem)))` }}
+        />
+        {ITEMS.map(({ href, label, icon: Icon }, index) => {
+          const active = index === activeIndex;
           return (
             <Link
               key={href}
               href={href}
               aria-current={active ? "page" : undefined}
-              className={`flex min-h-12 min-w-16 cursor-pointer flex-col items-center justify-center gap-1 rounded-full px-3.5 py-1.5 text-[11px] font-normal transition duration-200 ease-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)] ${
-                active
-                  ? "bg-[var(--surface-soft)] text-[var(--foreground)]"
-                  : "text-[var(--muted)] hover:bg-[var(--surface-soft)] hover:text-[var(--foreground)]"
+              className={`relative flex h-13 w-22 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-full font-normal transition-colors duration-200 ease-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)] ${
+                active ? "text-[var(--foreground)]" : "text-[var(--muted)] hover:text-[var(--foreground)]"
               }`}
             >
               <Icon />
-              <span className="btn-label text-[11px] leading-none">{label}</span>
+              <span className="btn-label text-[11px] leading-none tracking-[0.02em]">{label}</span>
             </Link>
           );
         })}

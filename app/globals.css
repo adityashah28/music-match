@@ -288,7 +288,7 @@ h3 {
 }
 
 .screen-nav {
-  padding-bottom: calc(7.5rem + var(--safe-bottom));
+  padding-bottom: calc(8rem + var(--safe-bottom));
 }
 
 @media (min-width: 768px) {
