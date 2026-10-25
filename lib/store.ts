@@ -429,9 +429,14 @@ function listShowsOf(snapshot: DataSnapshot, userId: string, options: ShowListOp
   // 100 km keeps a whole metro area (SF, Oakland, San Jose) in one date-ordered list; smaller rings
   // made far-away viewers see dates restart for every city.
   const ring = (km: number | null) => (km == null ? Number.POSITIVE_INFINITY : Math.floor(km / SHOW_RING_KM));
-  const searched = snapshot.shows.filter(
-    (show) => (!show.startsAt || Date.parse(show.startsAt) >= cutoff) && matchesSearch(show),
-  );
+  const mineOnly = options.mine === true;
+  const searched = snapshot.shows.filter((show) => {
+    if (show.startsAt && Date.parse(show.startsAt) < cutoff) return false;
+    if (!matchesSearch(show)) return false;
+    if (!mineOnly) return true;
+    const status = rsvps.get(show.id);
+    return status === "going" || status === "maybe";
+  });
 
   // The genre filter's options: genres among the search results, counted before filtering by genre
   const genreCounts = new Map<string, number>();
@@ -444,7 +449,9 @@ function listShowsOf(snapshot: DataSnapshot, userId: string, options: ShowListOp
   const ranked = searched
     .filter((show) => !genre || show.genres.includes(genre))
     .map((show) => ({ show, km: distanceTo(show) }))
-    .sort((a, b) => ring(a.km) - ring(b.km) || time(a.show) - time(b.show));
+    .sort((a, b) =>
+      mineOnly ? time(a.show) - time(b.show) : ring(a.km) - ring(b.km) || time(a.show) - time(b.show),
+    );
 
   const offset = Math.max(0, Math.floor(options.offset ?? 0));
   const limit = options.limit == null ? ranked.length : Math.min(100, Math.max(1, Math.floor(options.limit)));

@@ -7,8 +7,9 @@ import { listShows, viewerLocation } from "@/lib/store";
 export const dynamic = "force-dynamic";
 
 /**
- * GET /api/shows?userId=&q=&genre=&limit=&offset=
+ * GET /api/shows?userId=&q=&genre=&mine=&limit=&offset=
  * Upcoming shows nearest the viewer first. q searches artist, venue and city across all shows;
+ * mine=1 limits to shows the viewer marked Going or Maybe (soonest first);
  * limit/offset page through them (no limit returns every match).
  */
 export async function GET(request: Request) {
@@ -24,9 +25,11 @@ export async function GET(request: Request) {
       const value = Number(params.get(key));
       return params.has(key) && Number.isFinite(value) ? value : undefined;
     };
+    const mine = params.get("mine") === "1" || params.get("mine") === "true";
     const shows = await listShows(userId, {
       q: params.get("q")?.slice(0, 100) ?? "",
       genre: params.get("genre")?.trim() || undefined,
+      mine,
       limit: number("limit"),
       offset: number("offset"),
     });
@@ -36,7 +39,7 @@ export async function GET(request: Request) {
 
     // Few shows near this viewer (anywhere outside the seeded Bay Area): fetch their area from
     // Ticketmaster after responding; the page asks again while searchingNearby is true
-    if (shows.nearbyCount < NEARBY_ENOUGH) {
+    if (!mine && shows.nearbyCount < NEARBY_ENOUGH) {
       const origin = await viewerLocation(userId);
       if (origin && shouldImportNear(origin)) {
         after(() => importShowsNear(origin));

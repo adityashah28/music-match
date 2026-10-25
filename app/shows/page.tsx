@@ -23,6 +23,13 @@ import { photoFor, portraitFor } from "@/lib/portraits";
 /** Shows on the page before searching; search reaches every show. */
 const SHOWS_PER_PAGE = 10;
 
+type Tab = "discover" | "mine";
+
+const TABS: { id: Tab; label: string }[] = [
+  { id: "discover", label: "Discover" },
+  { id: "mine", label: "Mine" },
+];
+
 export default function ShowsPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -31,6 +38,7 @@ export default function ShowsPage() {
   const [query, setQuery] = useState("");
   const [rsvpError, setRsvpError] = useState("");
   const [reload, setReload] = useState(0);
+  const [tab, setTab] = useState<Tab>("discover");
 
   // The server searches every show and sorts nearest first; ask again 250ms after typing stops
   const [search, setSearch] = useState("");
@@ -49,6 +57,22 @@ export default function ShowsPage() {
   // Sticky once true: a search with zero matches shouldn't hide the bar that let you fix the search.
   const [everHadShows, setEverHadShows] = useState(false);
 
+  function showTab(next: Tab) {
+    if (next === tab) return;
+    setTab(next);
+    setQuery("");
+    setSearch("");
+    setGenre("");
+    setShows([]);
+    setHasMore(false);
+    setGenreOptions([]);
+    setRsvpError("");
+    setSearchingNearby(false);
+    setLoading(true);
+    setError(false);
+    nearbyRetries.current = 0;
+  }
+
   useEffect(() => {
     const id = getUserId();
     if (!id) {
@@ -62,6 +86,7 @@ export default function ShowsPage() {
     const params = new URLSearchParams({ userId: id, limit: String(SHOWS_PER_PAGE) });
     if (search) params.set("q", search);
     if (genre) params.set("genre", genre);
+    if (tab === "mine") params.set("mine", "1");
     fetchJson(`/api/shows?${params}`)
       .then((data) => {
         if (cancelled) return;
@@ -71,7 +96,7 @@ export default function ShowsPage() {
         setHasMore(Boolean(data && typeof data === "object" && "hasMore" in data && data.hasMore));
         setGenreOptions(genreOptionsFrom(data));
         const searching = Boolean(data && typeof data === "object" && "searchingNearby" in data && data.searchingNearby);
-        if (searching && nearbyRetries.current < 3) {
+        if (tab === "discover" && searching && nearbyRetries.current < 3) {
           nearbyRetries.current += 1;
           setSearchingNearby(true);
           window.setTimeout(() => setReload((value) => value + 1), 6000);
@@ -89,7 +114,7 @@ export default function ShowsPage() {
     return () => {
       cancelled = true;
     };
-  }, [router, reload, search, genre]);
+  }, [router, reload, search, genre, tab]);
 
   /** Next page of the same search, added below the shows already on screen. */
   async function showMore() {
@@ -100,6 +125,7 @@ export default function ShowsPage() {
       const params = new URLSearchParams({ userId: id, limit: String(SHOWS_PER_PAGE), offset: String(shows.length) });
       if (search) params.set("q", search);
       if (genre) params.set("genre", genre);
+      if (tab === "mine") params.set("mine", "1");
       const data = await fetchJson(`/api/shows?${params}`);
       const next = normalizeShows(data);
       setShows((current) => [...current, ...next.filter((show) => !current.some((item) => item.id === show.id))]);
@@ -119,7 +145,11 @@ export default function ShowsPage() {
     }
     const previous = show.rsvp;
     setRsvpError("");
-    setShows((current) => current.map((item) => (item.id === show.id ? { ...item, rsvp: next } : item)));
+    if (tab === "mine" && next === "not_going") {
+      setShows((current) => current.filter((item) => item.id !== show.id));
+    } else {
+      setShows((current) => current.map((item) => (item.id === show.id ? { ...item, rsvp: next } : item)));
+    }
     try {
       await fetchJson(`/api/shows/${show.id}/rsvp`, {
         method: "POST",
@@ -127,12 +157,27 @@ export default function ShowsPage() {
         body: JSON.stringify({ userId: id, status: next, rsvp: next }),
       });
     } catch {
-      setShows((current) =>
-        current.map((item) => (item.id === show.id ? { ...item, rsvp: previous } : item)),
-      );
+      if (tab === "mine" && next === "not_going") {
+        setShows((current) => {
+          if (current.some((item) => item.id === show.id)) return current;
+          return [...current, { ...show, rsvp: previous }].sort(
+            (a, b) =>
+              (a.startsAt ? Date.parse(a.startsAt) : Number.POSITIVE_INFINITY) -
+              (b.startsAt ? Date.parse(b.startsAt) : Number.POSITIVE_INFINITY),
+          );
+        });
+      } else {
+        setShows((current) =>
+          current.map((item) => (item.id === show.id ? { ...item, rsvp: previous } : item)),
+        );
+      }
       setRsvpError("Couldn't save that RSVP. Try again.");
     }
   }
+
+  const emptyDiscover = !loading && !error && tab === "discover" && shows.length === 0 && !search && !genre;
+  const emptyMine = !loading && !error && tab === "mine" && shows.length === 0 && !search && !genre;
+  const showList = !loading && !error && (shows.length > 0 || search || genre);
 
   return (
     <GradientBackground>
@@ -141,7 +186,7 @@ export default function ShowsPage() {
           Shows
         </h1>
         <p className="mt-3 text-base font-normal leading-snug text-[var(--muted)]">
-          Add your upcoming shows.
+          {tab === "mine" ? "Your upcoming shows." : "Add your upcoming shows."}
         </p>
         {searchingNearby ? (
           <p className="mt-2 text-sm font-normal text-[var(--muted)]" role="status">
@@ -149,8 +194,33 @@ export default function ShowsPage() {
           </p>
         ) : null}
 
+        <div
+          role="group"
+          aria-label="Filter shows"
+          className="mt-6 grid grid-cols-2 gap-1 rounded-full border border-[var(--border)] bg-[var(--surface)] p-1"
+        >
+          {TABS.map((option) => {
+            const selected = tab === option.id;
+            return (
+              <button
+                key={option.id}
+                type="button"
+                aria-pressed={selected}
+                onClick={() => showTab(option.id)}
+                className={`font-sans inline-flex min-h-10 cursor-pointer items-center justify-center rounded-full px-2 text-sm font-normal leading-none transition duration-200 ease-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)] ${
+                  selected
+                    ? "bg-[var(--foreground)] text-[var(--on-foreground)]"
+                    : "text-[var(--foreground)] hover:bg-[var(--surface-soft)]"
+                }`}
+              >
+                <span className="btn-label">{option.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
         {!loading && !error && everHadShows ? (
-          <label className="field mt-6 flex min-h-12 items-center gap-2 px-4">
+          <label className="field mt-4 flex min-h-12 items-center gap-2 px-4">
             <SearchIcon />
             <span className="sr-only">Search shows</span>
             <input
@@ -166,7 +236,7 @@ export default function ShowsPage() {
         ) : null}
 
         {!loading && !error && genreOptions.length > 0 ? (
-          <div className="mt-3 -mx-1 flex gap-2 overflow-x-auto px-1 pb-1" role="group" aria-label="Filter by genre">
+          <div className="mt-3 -mx-1 flex items-center gap-2 overflow-x-auto px-1 pb-1" role="group" aria-label="Filter by genre">
             {[{ id: "", label: "All", count: 0 }, ...genreOptions].map((option) => {
               const selected = genre === option.id;
               return (
@@ -175,13 +245,13 @@ export default function ShowsPage() {
                   type="button"
                   aria-pressed={selected}
                   onClick={() => setGenre(selected ? "" : option.id)}
-                  className={`min-h-9 shrink-0 cursor-pointer rounded-full border px-4 text-sm font-normal transition ${
+                  className={`font-sans inline-flex min-h-9 shrink-0 cursor-pointer items-center justify-center rounded-full border px-4 text-sm font-normal leading-none transition ${
                     selected
                       ? "border-[var(--foreground)] bg-[var(--foreground)] text-[var(--on-foreground)]"
                       : "border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] hover:border-[var(--foreground)]"
                   }`}
                 >
-                  {option.label}
+                  <span className="btn-label">{option.label}</span>
                 </button>
               );
             })}
@@ -205,7 +275,7 @@ export default function ShowsPage() {
           </GlassCard>
         ) : null}
 
-        {!loading && !error && shows.length === 0 && !search && !genre ? (
+        {emptyDiscover ? (
           <GlassCard className="mt-6 p-5">
             <p className="text-base leading-snug text-[var(--muted)]">
               No shows lined up for your artists yet.
@@ -216,12 +286,29 @@ export default function ShowsPage() {
           </GlassCard>
         ) : null}
 
-        {!loading && !error && (shows.length > 0 || search || genre) ? (
+        {emptyMine ? (
+          <GlassCard className="mt-6 p-5">
+            <p className="text-base leading-snug text-[var(--muted)]">
+              No upcoming shows of yours yet. Browse Discover and tap Going or Maybe.
+            </p>
+            <div className="mt-5">
+              <PrimaryButton onClick={() => showTab("discover")}>Browse Discover</PrimaryButton>
+            </div>
+          </GlassCard>
+        ) : null}
+
+        {showList ? (
           <div className="mt-6 flex flex-col gap-4">
             {rsvpError ? <p className="text-sm text-[var(--muted)]">{rsvpError}</p> : null}
             {filteredShows.length === 0 ? (
               <p className="text-base leading-snug text-[var(--muted)]">
-                {genre && !search ? "No upcoming shows in that genre." : "No shows match that search."}
+                {tab === "mine"
+                  ? genre && !search
+                    ? "No upcoming shows of yours in that genre."
+                    : "No shows of yours match that search."
+                  : genre && !search
+                    ? "No upcoming shows in that genre."
+                    : "No shows match that search."}
               </p>
             ) : (
               filteredShows.map((show) => {

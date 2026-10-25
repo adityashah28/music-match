@@ -267,6 +267,8 @@ export type ShowListOptions = {
   q?: string;
   /** Only shows tagged with this genre id (lib/genres.ts). */
   genre?: string;
+  /** Only upcoming shows the viewer marked Going or Maybe. */
+  mine?: boolean;
   limit?: number;
   offset?: number;
 };
