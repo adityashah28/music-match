@@ -2,6 +2,10 @@
 
 :root {
   --background: #f4f5f7;
+  /* Same color as --background, as bare R,G,B channels for rgba() — avoids
+     color-mix(), which isn't supported in every browser/webview and was
+     silently rendering as a flat, unfaded block where it failed. */
+  --background-channels: 244, 245, 247;
   --foreground: #121212;
   --muted: rgba(18, 18, 18, 0.55);
   --border: rgba(18, 18, 18, 0.12);
@@ -51,6 +55,7 @@
  */
 :root[data-theme="dark"] {
   --background: #0e0f11;
+  --background-channels: 14, 15, 17;
   --foreground: #f1f2f4;
   --muted: rgba(241, 242, 244, 0.6);
   --border: rgba(241, 242, 244, 0.13);
@@ -79,23 +84,22 @@
 }
 
 /*
- * Fixed header: a plain color gradient (no blur, no mask) so nav links stay
- * legible over scrolled content behind them — just var(--background) fading
- * to nothing, same technique as the shows-card scrim. Bleeds past the
+ * Fixed header: a plain color gradient (no blur, no mask) behind the nav
+ * text, fading to nothing so there's no harsh edge. Bleeds past the
  * header's own row so it never crosses the nav text itself.
  */
 .site-header::before {
   content: "";
   position: absolute;
   inset: 0;
-  bottom: -5rem;
+  bottom: -2rem;
   z-index: -1;
   pointer-events: none;
   background: linear-gradient(
     to bottom,
-    color-mix(in srgb, var(--background) 55%, transparent) 0%,
-    color-mix(in srgb, var(--background) 30%, transparent) 35%,
-    color-mix(in srgb, var(--background) 10%, transparent) 65%,
+    rgba(var(--background-channels), 0.55) 0%,
+    rgba(var(--background-channels), 0.3) 55%,
+    rgba(var(--background-channels), 0.1) 80%,
     transparent 100%
   );
 }
