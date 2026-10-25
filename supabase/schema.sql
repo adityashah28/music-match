@@ -90,7 +90,10 @@ create table if not exists shows (
   updated_at timestamptz not null default now(),
   -- The event's id in its source, so re-running the shows seed updates instead of duplicating
   source_id text,
-  image_url text
+  image_url text,
+  -- Coordinates of the show's city, for sorting by distance from the viewer
+  lat double precision,
+  lng double precision
 );
 
 create index if not exists shows_normalized_artist_name_idx on shows (normalized_artist_name);

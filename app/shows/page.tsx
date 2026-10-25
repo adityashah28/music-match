@@ -19,6 +19,9 @@ import {
 } from "@/lib/client";
 import { photoFor, portraitFor } from "@/lib/portraits";
 
+/** Shows on the page before searching; search reaches every show. */
+const SHOWS_PER_PAGE = 10;
+
 export default function ShowsPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -28,15 +31,13 @@ export default function ShowsPage() {
   const [rsvpError, setRsvpError] = useState("");
   const [reload, setReload] = useState(0);
 
-  const needle = query.trim().toLowerCase();
-  const filteredShows = !needle
-    ? shows
-    : shows.filter(
-        (show) =>
-          show.artistName.toLowerCase().includes(needle) ||
-          show.venue.toLowerCase().includes(needle) ||
-          show.city.toLowerCase().includes(needle),
-      );
+  // The server searches every show and sorts nearest first; ask again 250ms after typing stops
+  const [search, setSearch] = useState("");
+  useEffect(() => {
+    const id = window.setTimeout(() => setSearch(query.trim()), 250);
+    return () => window.clearTimeout(id);
+  }, [query]);
+  const filteredShows = shows;
 
   useEffect(() => {
     const id = getUserId();
@@ -46,10 +47,11 @@ export default function ShowsPage() {
     }
 
     let cancelled = false;
-    setLoading(true);
     setError(false);
 
-    fetchJson(`/api/shows?userId=${encodeURIComponent(id)}`)
+    const params = new URLSearchParams({ userId: id, limit: String(SHOWS_PER_PAGE) });
+    if (search) params.set("q", search);
+    fetchJson(`/api/shows?${params}`)
       .then((data) => {
         if (!cancelled) setShows(normalizeShows(data));
       })
@@ -63,7 +65,7 @@ export default function ShowsPage() {
     return () => {
       cancelled = true;
     };
-  }, [router, reload]);
+  }, [router, reload, search]);
 
   async function setRsvp(show: ShowItem, next: RsvpStatus) {
     const id = getUserId();

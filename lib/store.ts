@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { dominantColorFromImage } from "@/lib/color";
+import { distanceKm, type Coords } from "@/lib/geocode";
 import { isStoreError, StoreError } from "@/lib/errors";
 import { buildMatches, icebreakerFor, summarizeTaste } from "@/lib/matching";
 import { demoAutoReply, icebreakerPrompts, icebreakerText } from "@/lib/icebreakers";
@@ -20,7 +21,9 @@ import type {
   SendIcebreakerResponse,
   ShareResponse,
   ShowDetail,
+  ShowListOptions,
   ShowListResponse,
+  ShowReason,
   ShowSummary,
   SkipResponse,
   StoredArtist,
@@ -345,43 +348,74 @@ function matchesOf(snapshot: DataSnapshot, userId: string): MatchesResponse | nu
   );
 }
 
-function listShowsOf(snapshot: DataSnapshot, userId: string): ShowListResponse {
+function listShowsOf(snapshot: DataSnapshot, userId: string, options: ShowListOptions = {}): ShowListResponse {
   const matches = matchesOf(snapshot, userId);
-  if (!matches) return { shows: [] };
+  if (!matches) return { shows: [], total: 0, hasMore: false };
   const people = toPeople(snapshot);
-  const names = new Set<string>();
+  // Every upcoming show is listed; this only labels why a show is relevant to you, strongest first
+  const reasons = new Map<string, ShowReason>();
+  const label = (name: string, reason: ShowReason) => {
+    if (name && !reasons.has(name)) reasons.set(name, reason);
+  };
   const self = people.find((person) => person.id === userId);
-  for (const artist of self?.artists ?? []) names.add(normalizeName(artist.name));
+  for (const artist of self?.artists ?? []) label(normalizeName(artist.name), "your_artist");
   const matchIds = new Set(matches.matches.map((match) => match.userId));
   for (const person of people) {
     if (!matchIds.has(person.id)) continue;
-    for (const artist of person.artists) names.add(normalizeName(artist.name));
+    for (const artist of person.artists) label(normalizeName(artist.name), "match_artist");
   }
-  // Your scene: artists related to yours, in either direction, so the list is rarely empty
+  // Your scene: artists related to yours, in either direction
   const mine = new Set((self?.artists ?? []).map((artist) => artist.id));
   const byId = new Map(snapshot.artists.map((artist) => [artist.id, artist.normalizedName]));
   for (const edge of snapshot.related) {
     const other = mine.has(edge.artistId) ? edge.relatedArtistId : mine.has(edge.relatedArtistId) ? edge.artistId : null;
     const name = other ? byId.get(other) : undefined;
-    if (name) names.add(name);
+    if (name) label(name, "scene");
   }
   const rsvps = new Map(
     snapshot.rsvps.filter((rsvp) => rsvp.userId === userId).map((rsvp) => [rsvp.showId, rsvp.status]),
   );
   const artistsByName = artistsByNormalizedName(snapshot);
+  // Where the viewer is: their city's coordinates, else a show in a city with the same name
+  const me = snapshot.users.find((user) => user.id === userId);
+  let origin: Coords | null = me?.cityLat != null && me?.cityLng != null ? { lat: me.cityLat, lng: me.cityLng } : null;
+  if (!origin && me?.city) {
+    const key = me.city.trim().toLowerCase();
+    const sameCity = snapshot.shows.find((s) => s.city?.trim().toLowerCase() === key && s.lat != null && s.lng != null);
+    if (sameCity) origin = { lat: sameCity.lat!, lng: sameCity.lng! };
+  }
+  const distanceTo = (show: StoredShow) =>
+    origin && show.lat != null && show.lng != null ? distanceKm(origin, { lat: show.lat, lng: show.lng }) : null;
+
+  // Every word of the search must appear in the artist, venue or city
+  const words = normalizeName(options.q ?? "").split(" ").filter(Boolean);
+  const matchesSearch = (show: StoredShow) =>
+    words.length === 0 ||
+    words.every((word) => normalizeName(`${show.artistName} ${show.venue ?? ""} ${show.city ?? ""}`).includes(word));
+
   // Keep shows that started in the last few hours (people are still there), drop older ones
   const cutoff = Date.now() - 6 * 60 * 60 * 1000;
-  const shows = snapshot.shows
-    .filter((show) => !show.startsAt || Date.parse(show.startsAt) >= cutoff)
-    .filter((show) => names.has(show.normalizedArtistName || normalizeName(show.artistName)))
-    .sort((a, b) => {
-      const left = a.startsAt ? Date.parse(a.startsAt) : Number.POSITIVE_INFINITY;
-      const right = b.startsAt ? Date.parse(b.startsAt) : Number.POSITIVE_INFINITY;
-      return left - right;
-    })
-    .map((show) => showSummary(show, rsvps.get(show.id) ?? null, artistsByName));
-  return { shows };
+  const time = (show: StoredShow) => (show.startsAt ? Date.parse(show.startsAt) : Number.POSITIVE_INFINITY);
+  // Nearest first, in rings: everything within 25 km sorts by date, then the next 25 km, and so on.
+  // Pure distance would bury a show 15 km away tonight under every show in your own city next year.
+  const ring = (km: number | null) => (km == null ? Number.POSITIVE_INFINITY : Math.floor(km / SHOW_RING_KM));
+  const ranked = snapshot.shows
+    .filter((show) => (!show.startsAt || Date.parse(show.startsAt) >= cutoff) && matchesSearch(show))
+    .map((show) => ({ show, km: distanceTo(show) }))
+    .sort((a, b) => ring(a.km) - ring(b.km) || time(a.show) - time(b.show));
+
+  const offset = Math.max(0, Math.floor(options.offset ?? 0));
+  const limit = options.limit == null ? ranked.length : Math.min(100, Math.max(1, Math.floor(options.limit)));
+  const shows = ranked.slice(offset, offset + limit).map(({ show, km }) => ({
+    ...showSummary(show, rsvps.get(show.id) ?? null, artistsByName),
+    forYou: reasons.get(show.normalizedArtistName || normalizeName(show.artistName)) ?? null,
+    distanceKm: km == null ? null : Math.round(km),
+  }));
+  return { shows, total: ranked.length, hasMore: offset + shows.length < ranked.length };
 }
+
+/** Width of each distance ring when sorting shows (see listShowsOf). */
+const SHOW_RING_KM = 25;
 
 function showDetailOf(snapshot: DataSnapshot, showId: string, userId: string): ShowDetail | null {
   const show = snapshot.shows.find((row) => row.id === showId);
@@ -605,6 +639,8 @@ async function absorbApify(snapshot: DataSnapshot, payload: unknown) {
           imageUrl,
           source: "apify",
           updatedAt: new Date().toISOString(),
+          lat: null,
+          lng: null,
         });
       }
     }
@@ -738,6 +774,8 @@ function mapShow(row: Record<string, unknown>): StoredShow {
     imageUrl: text(row.image_url),
     source: text(row.source) ?? "supabase",
     updatedAt: text(row.updated_at) ?? new Date().toISOString(),
+    lat: num(row.lat),
+    lng: num(row.lng),
   };
 }
 
@@ -793,6 +831,8 @@ function showRow(show: StoredShow) {
     image_url: show.imageUrl,
     source: show.source,
     updated_at: show.updatedAt,
+    lat: show.lat,
+    lng: show.lng,
   };
 }
 
@@ -840,7 +880,9 @@ function showChanged(before: StoredShow, after: StoredShow): boolean {
     before.startsAt !== after.startsAt ||
     before.ticketUrl !== after.ticketUrl ||
     before.imageUrl !== after.imageUrl ||
-    before.source !== after.source
+    before.source !== after.source ||
+    before.lat !== after.lat ||
+    before.lng !== after.lng
   );
 }
 
@@ -1606,9 +1648,9 @@ export async function sendIcebreaker(
   }
 }
 
-export async function listShows(userId: string): Promise<ShowListResponse> {
+export async function listShows(userId: string, options: ShowListOptions = {}): Promise<ShowListResponse> {
   try {
-    return await read((snapshot) => listShowsOf(snapshot, userId));
+    return await read((snapshot) => listShowsOf(snapshot, userId, options));
   } catch (error) {
     throw wrap(error);
   }

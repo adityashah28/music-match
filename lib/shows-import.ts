@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { geocodeCity } from "@/lib/geocode";
 import { normalizeName } from "@/lib/normalize";
 
 /**
@@ -27,6 +28,9 @@ export type ShowRow = {
   ticket_url: string | null;
   image_url: string | null;
   updated_at: string;
+  /** Coordinates of the show's city, filled in by saveShows. */
+  lat?: number | null;
+  lng?: number | null;
 };
 
 /**
@@ -137,6 +141,15 @@ export async function saveShows(db: SupabaseClient, candidates: ShowRow[]): Prom
   }
 
   const rows = [...winners.values()];
+
+  // Coordinates of each show's city, so the Shows list can sort by distance (one lookup per city)
+  for (const city of new Set(rows.map((r) => r.city).filter((c): c is string => Boolean(c)))) {
+    const coords = await geocodeCity(city);
+    for (const row of rows) {
+      if (row.city === city) Object.assign(row, { lat: coords?.lat ?? null, lng: coords?.lng ?? null });
+    }
+  }
+
   for (let i = 0; i < rows.length; i += 200) {
     const { error } = await db.from("shows").upsert(rows.slice(i, i + 200), { onConflict: "source,source_id" });
     if (error) throw new Error(error.message);

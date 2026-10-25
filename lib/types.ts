@@ -231,8 +231,31 @@ export type ShowSummary = {
   rsvp: RsvpStatus | null;
 };
 
+/** Why a show is relevant to the viewer, strongest first; null = not connected to their taste. */
+export type ShowReason = "your_artist" | "match_artist" | "scene";
+
+export type ShowListItem = ShowSummary & {
+  forYou: ShowReason | null;
+  /** Distance from the viewer's city in km, or null if either location is unknown. */
+  distanceKm: number | null;
+};
+
+/**
+ * Upcoming shows nearest the viewer first (in 25 km rings, soonest first within a ring),
+ * optionally filtered by a search, one page at a time.
+ */
 export type ShowListResponse = {
-  shows: ShowSummary[];
+  shows: ShowListItem[];
+  /** Shows matching the search across all pages. */
+  total: number;
+  hasMore: boolean;
+};
+
+export type ShowListOptions = {
+  /** Words that must all appear in the artist, venue or city. */
+  q?: string;
+  limit?: number;
+  offset?: number;
 };
 
 export type ShowDetail = ShowSummary & {
@@ -351,6 +374,9 @@ export type StoredShow = {
   imageUrl: string | null;
   source: string;
   updatedAt: string;
+  /** Coordinates of the show's city (null until geocoded). */
+  lat: number | null;
+  lng: number | null;
 };
 
 export type StoredRsvp = {

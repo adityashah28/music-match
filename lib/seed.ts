@@ -602,6 +602,8 @@ export function createSeed(): DataSnapshot {
       imageUrl: null,
       source: "seed",
       updatedAt: SEEDED_AT,
+      lat: null,
+      lng: null,
     };
   });
 

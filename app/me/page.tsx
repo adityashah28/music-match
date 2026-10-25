@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { AgeNumberInput } from "@/components/AgeNumberInput";
 import { MatchOffsetControl } from "@/components/MatchOffsetControl";
@@ -37,6 +38,7 @@ export default function MePage() {
   const [profileId, setProfileId] = useState("");
 
   const [name, setName] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState("");
   const [handle, setHandle] = useState("");
   const [city, setCity] = useState<CityValue>({
     city: "",
@@ -88,6 +90,7 @@ export default function MePage() {
         }
         setName(profile.name);
         setHandle(profile.handle);
+        setAvatarUrl(profile.avatarUrl ?? "");
         setCity({
           city: profile.city,
           label: profile.city,
@@ -235,6 +238,7 @@ export default function MePage() {
       if (profile) {
         setName(profile.name);
         setHandle(profile.handle);
+        setAvatarUrl(profile.avatarUrl ?? "");
         setCity({
           city: profile.city,
           label: profile.city,
@@ -265,6 +269,23 @@ export default function MePage() {
   return (
     <GradientBackground>
       <main className="screen screen-nav flex min-h-dvh flex-col">
+        {/* Google profile picture; initials for profiles without one (phone sign-in) */}
+        {avatarUrl ? (
+          <Image
+            src={avatarUrl}
+            alt=""
+            width={72}
+            height={72}
+            className="mb-4 h-[72px] w-[72px] rounded-full border border-[var(--border)] object-cover"
+          />
+        ) : !loading ? (
+          <div
+            aria-hidden
+            className="mb-4 flex h-[72px] w-[72px] items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface-soft)] text-2xl font-semibold text-[var(--muted)]"
+          >
+            {(name || handle || "?").trim().charAt(0).toUpperCase()}
+          </div>
+        ) : null}
         <p className="text-sm font-normal uppercase tracking-[0.18em] text-[var(--muted)]">
           {handle || "Your profile"}
         </p>

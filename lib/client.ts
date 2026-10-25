@@ -105,6 +105,10 @@ export type ShowItem = {
   imageUrl?: string;
   color?: string;
   rsvp: RsvpStatus | null;
+  /** Why it's relevant to you: your artist, a match's artist, or your scene. Undefined = just a Bay Area show. */
+  forYou?: "your_artist" | "match_artist" | "scene";
+  /** Distance from your city in km; undefined if either location is unknown. */
+  distanceKm?: number;
   goingCount?: number;
   tasteSummary?: string;
 };
@@ -554,6 +558,9 @@ export function normalizeShow(value: unknown): ShowItem | null {
     imageUrl: text(row.imageUrl) ?? text(row.image_url),
     color: text(row.color) ?? text(row.dominantColorHex) ?? text(row.dominant_color_hex),
     rsvp,
+    forYou:
+      row.forYou === "your_artist" || row.forYou === "match_artist" || row.forYou === "scene" ? row.forYou : undefined,
+    distanceKm: typeof row.distanceKm === "number" ? row.distanceKm : undefined,
     goingCount,
     tasteSummary:
       text(row.tasteSummary) ??
