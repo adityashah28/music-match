@@ -50,13 +50,12 @@ function OptionIcon({
   value: (typeof OPTIONS)[number]["value"];
   selected: boolean;
 }) {
-  const color = value === "going" ? "#16a34a" : value === "maybe" ? "#2563eb" : "#e11d48";
   const common = {
     viewBox: "0 0 24 24",
     "aria-hidden": true as const,
     className: "h-4 w-4 shrink-0",
     fill: "none",
-    stroke: selected ? (value === "going" || value === "maybe" || value === "not_going" ? "#fff" : color) : "currentColor",
+    stroke: selected ? "var(--on-foreground)" : "currentColor",
     strokeWidth: 1.8,
     strokeLinecap: "round" as const,
     strokeLinejoin: "round" as const,
