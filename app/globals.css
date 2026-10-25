@@ -78,6 +78,35 @@
   --tone-label: var(--tone-on-dark);
 }
 
+/*
+ * Fixed header: a soft fade, not a hard bar, so nav links stay legible over
+ * scrolled content behind them. The fade bleeds past the header's own row
+ * (bottom: -5rem) so it never crosses the nav text itself — the text sits
+ * on the solid part, only the trail below it fades to transparent.
+ */
+.site-header {
+  position: relative;
+}
+.site-header::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  bottom: -5rem;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--background) 45%, transparent) 0%,
+    color-mix(in srgb, var(--background) 25%, transparent) 35%,
+    color-mix(in srgb, var(--background) 8%, transparent) 65%,
+    transparent 100%
+  );
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  mask-image: linear-gradient(to bottom, black 0%, black 35%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black 0%, black 35%, transparent 100%);
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
