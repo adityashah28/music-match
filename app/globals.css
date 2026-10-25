@@ -84,6 +84,44 @@
 }
 
 /*
+ * Theme switch (ThemeToggle): the new theme grows out of the button as a circle clipped onto
+ * ::view-transition-new(root), laid over a still snapshot of the old theme. No crossfade.
+ */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+::view-transition-old(root) {
+  z-index: 1;
+}
+::view-transition-new(root) {
+  z-index: 2;
+}
+
+/* Colors switch in one step, so 200ms hover transitions don't trail the new theme */
+:root[data-theme-switching] *,
+:root[data-theme-switching] *::before,
+:root[data-theme-switching] *::after {
+  transition: none !important;
+}
+
+@keyframes theme-icon-in {
+  from {
+    opacity: 0;
+    transform: rotate(-90deg) scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.theme-icon-in {
+  animation: theme-icon-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/*
  * Fixed header: a plain color gradient (no blur, no mask) behind the nav
  * text, fading to nothing so there's no harsh edge. Bleeds past the
  * header's own row so it never crosses the nav text itself.
@@ -621,7 +659,8 @@ h3 {
   .hero-rise,
   .gallery-tile-inner,
   .onboarding-segment,
-  .setup-fill {
+  .setup-fill,
+  .theme-icon-in {
     animation: none;
   }
 
