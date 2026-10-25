@@ -397,8 +397,9 @@ function listShowsOf(snapshot: DataSnapshot, userId: string, options: ShowListOp
   // Keep shows that started in the last few hours (people are still there), drop older ones
   const cutoff = Date.now() - 6 * 60 * 60 * 1000;
   const time = (show: StoredShow) => (show.startsAt ? Date.parse(show.startsAt) : Number.POSITIVE_INFINITY);
-  // Nearest first, in rings: everything within 25 km sorts by date, then the next 25 km, and so on.
-  // Pure distance would bury a show 15 km away tonight under every show in your own city next year.
+  // Nearest first, in rings: everything within 100 km sorts by date, then the next 100 km, and so on.
+  // 100 km keeps a whole metro area (SF, Oakland, San Jose) in one date-ordered list; smaller rings
+  // made far-away viewers see dates restart for every city.
   const ring = (km: number | null) => (km == null ? Number.POSITIVE_INFINITY : Math.floor(km / SHOW_RING_KM));
   const searched = snapshot.shows.filter(
     (show) => (!show.startsAt || Date.parse(show.startsAt) >= cutoff) && matchesSearch(show),
@@ -429,7 +430,7 @@ function listShowsOf(snapshot: DataSnapshot, userId: string, options: ShowListOp
 }
 
 /** Width of each distance ring when sorting shows (see listShowsOf). */
-const SHOW_RING_KM = 25;
+const SHOW_RING_KM = 100;
 
 function showDetailOf(snapshot: DataSnapshot, showId: string, userId: string): ShowDetail | null {
   const show = snapshot.shows.find((row) => row.id === showId);

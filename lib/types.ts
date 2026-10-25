@@ -243,7 +243,7 @@ export type ShowListItem = ShowSummary & {
 };
 
 /**
- * Upcoming shows nearest the viewer first (in 25 km rings, soonest first within a ring),
+ * Upcoming shows nearest the viewer first (in 100 km rings, soonest first within a ring),
  * optionally filtered by a search, one page at a time.
  */
 export type ShowListResponse = {
