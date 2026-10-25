@@ -1,4 +1,4 @@
-// Icebreaker prompts: a fixed list the sender picks from, never freeform text.
+// Icebreaker prompts: presets the sender can tap; free-form asks are also allowed via the store.
 // Templates that need an artist only show up once a match has a shared artist to plug in.
 
 export type IcebreakerPrompt = { id: string; text: string };
@@ -53,8 +53,7 @@ export function icebreakerText(promptId: string, sharedArtistName: string | null
 }
 
 // Keyed by prompt id so the reply actually answers what was asked, not just a generic yes.
-// Every prompt the demo is asked comes from TEMPLATES (asking is never freeform), so this
-// always has a matching entry.
+// Unknown / custom prompt ids fall through to FALLBACK_REPLIES.
 const DEMO_REPLIES: Record<string, (artist: string | null) => string[]> = {
   "deep-cut": (artist) => [
     `Honestly, anything off their early stuff — ${artist ?? "them"} deep cuts hit different.`,

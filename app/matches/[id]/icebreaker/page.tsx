@@ -87,7 +87,7 @@ export default function IcebreakerPage() {
 
   async function sendPrompt(promptId: string) {
     const me = getUserId();
-    if (!me || !match || sendingPrompt) return;
+    if (!me || !match || sendingPrompt || sendingCustom) return;
     setSendingPrompt(promptId);
     setPostError("");
     buzz();
@@ -101,14 +101,23 @@ export default function IcebreakerPage() {
     }
   }
 
-  async function sendCustomReply() {
+  const rounds = match?.icebreaker?.rounds ?? [];
+  // One open prompt per pair at a time: once either side asks, nobody can ask again until
+  // the recipient answers it.
+  const openRound = rounds.length > 0 && !rounds[rounds.length - 1].reply ? rounds[rounds.length - 1] : null;
+  const canSendNew = !openRound;
+  const canReply = Boolean(openRound) && !openRound!.promptFromMe;
+
+  async function sendText() {
     const me = getUserId();
     const text = customReply.trim();
-    if (!me || !match || sendingCustom || !text) return;
+    if (!me || !match || sendingCustom || sendingPrompt || !text) return;
+    if (!canSendNew && !canReply) return;
     setSendingCustom(true);
     setPostError("");
     buzz();
     try {
+      // Empty promptId: store opens a custom ask (no open round) or replies (open round).
       const icebreaker = await sendIcebreaker(me, match.userId, "", text);
       setMatch({ ...match, icebreaker });
       setCustomReply("");
@@ -119,13 +128,6 @@ export default function IcebreakerPage() {
     }
   }
 
-  const rounds = match?.icebreaker?.rounds ?? [];
-  // One open prompt per pair at a time: once either side asks, nobody can ask again until
-  // the recipient answers it.
-  const openRound = rounds.length > 0 && !rounds[rounds.length - 1].reply ? rounds[rounds.length - 1] : null;
-  const canSendNew = !openRound;
-  const canReply = Boolean(openRound) && !openRound!.promptFromMe;
-
   return (
     <GradientBackground>
       <main className="flex h-dvh flex-col overflow-hidden">
@@ -133,7 +135,11 @@ export default function IcebreakerPage() {
           className="flex shrink-0 items-center gap-3 border-b border-[var(--border)] px-4"
           style={{ paddingTop: "max(0.75rem, env(safe-area-inset-top))", paddingBottom: "0.75rem" }}
         >
-          <BackLink href={matchId ? `/matches/${encodeURIComponent(matchId)}` : "/matches"} label="Back" />
+          <BackLink
+            href={matchId ? `/matches/${encodeURIComponent(matchId)}` : "/matches"}
+            label="Back"
+            className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 text-sm font-normal text-[var(--muted)] transition duration-200 ease-out hover:text-[var(--foreground)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)]"
+          />
           {match ? (
             <h1 className="min-w-0 truncate text-lg font-semibold text-[var(--foreground)]">
               {match.handle}
@@ -177,7 +183,7 @@ export default function IcebreakerPage() {
             <div className="flex flex-col gap-2">
               {rounds.length === 0 ? (
                 <p className="text-base leading-snug text-[var(--muted)]">
-                  Nothing yet — pick a prompt below to break the ice.
+                  Nothing yet — pick a prompt or ask something below.
                 </p>
               ) : null}
               {rounds.map((round) => (
@@ -234,47 +240,55 @@ export default function IcebreakerPage() {
             style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
           >
             {postError ? <p className="mb-2 text-sm text-[var(--muted)]">{postError}</p> : null}
-            {canSendNew ? (
-              <div className="flex flex-col gap-2">
-                <p className="text-sm font-normal text-[var(--muted)]">
-                  {rounds.length > 0 ? "Ask another" : "Pick a prompt to break the ice"}
-                </p>
-                <div className="flex max-h-40 flex-col gap-2 overflow-y-auto">
-                  {icebreakerPrompts(match.sharedArtists[0]?.name ?? null).map((prompt) => (
-                    <button
-                      key={prompt.id}
-                      type="button"
-                      onClick={() => sendPrompt(prompt.id)}
-                      disabled={Boolean(sendingPrompt)}
-                      className="flex min-h-14 w-full items-center rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-left font-sans text-base font-normal text-[var(--foreground)] transition hover:bg-[var(--surface-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)] disabled:pointer-events-none disabled:opacity-60"
-                    >
-                      {sendingPrompt === prompt.id ? "Sending…" : prompt.text}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : null}
 
-            {canReply ? (
+            {canSendNew || canReply ? (
               <div className="flex flex-col gap-2">
-                <p className="text-sm font-normal text-[var(--muted)]">Answer their question</p>
+                {canSendNew ? (
+                  <>
+                    <p className="text-sm font-normal text-[var(--muted)]">
+                      {rounds.length > 0 ? "Ask another" : "Pick a prompt or type your own"}
+                    </p>
+                    <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+                      {icebreakerPrompts(match.sharedArtists[0]?.name ?? null).map((prompt) => (
+                        <button
+                          key={prompt.id}
+                          type="button"
+                          onClick={() => sendPrompt(prompt.id)}
+                          disabled={Boolean(sendingPrompt) || sendingCustom}
+                          className="flex min-h-11 shrink-0 items-center rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 text-left font-sans text-sm font-normal whitespace-nowrap text-[var(--foreground)] transition hover:bg-[var(--surface-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--foreground)] disabled:pointer-events-none disabled:opacity-60"
+                        >
+                          {sendingPrompt === prompt.id ? "Sending…" : prompt.text}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-sm font-normal text-[var(--muted)]">Answer their question</p>
+                )}
                 <input
                   value={customReply}
                   onChange={(event) => setCustomReply(event.target.value)}
-                  placeholder="Say something…"
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" && !event.shiftKey) {
+                      event.preventDefault();
+                      void sendText();
+                    }
+                  }}
+                  placeholder={canSendNew ? "Ask something…" : "Say something…"}
                   maxLength={240}
-                  disabled={sendingCustom}
+                  disabled={sendingCustom || Boolean(sendingPrompt)}
                   className="field min-h-12 w-full px-4 text-base font-normal outline-none placeholder:text-[var(--muted)] disabled:opacity-60"
                 />
-                <PrimaryButton onClick={sendCustomReply} disabled={sendingCustom || !customReply.trim()}>
+                <PrimaryButton
+                  onClick={sendText}
+                  disabled={sendingCustom || Boolean(sendingPrompt) || !customReply.trim()}
+                >
                   {sendingCustom ? "Sending…" : "Send"}
                 </PrimaryButton>
               </div>
-            ) : null}
-
-            {!canSendNew && !canReply ? (
+            ) : (
               <p className="text-sm font-normal text-[var(--muted)]">Waiting for them to reply…</p>
-            ) : null}
+            )}
           </div>
         ) : null}
       </main>

@@ -74,6 +74,9 @@ export function SiteHeader() {
   const isLanding = pathname === "/";
   const isOnboarding = ONBOARDING_PATHS.has(pathname);
 
+  // Full-screen chat: local Back + handle only (same idea as BottomNav).
+  if (pathname.endsWith("/icebreaker")) return null;
+
   function renderCta(opts: { mobile?: boolean }) {
     if (!cta) return null;
 

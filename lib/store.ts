@@ -1477,8 +1477,9 @@ export async function setShare(
 }
 
 /**
- * Sends an icebreaker to a mutual match: either one of the fixed prompts (promptId) or your
- * own custom text. Same gate as socials: only works once both sides have tapped interested.
+ * Sends an icebreaker to a mutual match: a preset promptId, or free-form text that either
+ * opens a custom ask (no open round) or replies to the open round. Same gate as socials:
+ * only works once both sides have tapped interested.
  *
  * Prompts and replies form rounds: a prompt opens a round, and only the recipient of that
  * prompt can close it by replying. Nobody can open a new round while one is already open.
@@ -1508,7 +1509,7 @@ export async function sendIcebreaker(
       const openRound = state.rounds[state.rounds.length - 1];
       const isOpen = Boolean(openRound && !openRound.reply);
 
-      // Asking is always one of the fixed prompts; answering is always your own words.
+      // Preset prompts open a round; custom text can open a round (no open round) or reply.
       let text: string | null;
       let finalPromptId: string;
       let replyToId: string | null;
@@ -1520,12 +1521,18 @@ export async function sendIcebreaker(
         finalPromptId = promptId;
         replyToId = null;
         if (!text) throw new StoreError(400, "Pick a different prompt");
-      } else {
-        if (!isOpen || openRound.promptFromMe) throw new StoreError(400, "Nothing to answer yet");
+      } else if (isOpen) {
+        if (openRound.promptFromMe) throw new StoreError(400, "Nothing to answer yet");
         text = customText?.trim().slice(0, 240) || null;
         finalPromptId = "custom";
         replyToId = openRound.id;
         if (!text) throw new StoreError(400, "Answer in your own words");
+      } else {
+        // No open round + free-form text ⇒ open a custom ask (same one-open-round rule).
+        text = customText?.trim().slice(0, 240) || null;
+        finalPromptId = "custom";
+        replyToId = null;
+        if (!text) throw new StoreError(400, "Ask something in your own words");
       }
       const sent: StoredIcebreaker = {
         id: crypto.randomUUID(),
