@@ -7,7 +7,7 @@ import { CityAutocomplete, type CityValue } from "@/components/CityAutocomplete"
 import { GradientBackground } from "@/components/GradientBackground";
 import { OnboardingProgress } from "@/components/OnboardingProgress";
 import { PrimaryButton } from "@/components/PrimaryButton";
-import { getDraft, getUserId, isVerified, setDraft } from "@/lib/client";
+import { fetchJson, getDraft, getUserId, isVerified, setDraft } from "@/lib/client";
 
 function normalizeUsername(raw: string) {
   return raw.replace(/^@+/, "").replace(/\s+/g, "");
@@ -48,7 +48,7 @@ export default function AboutPage() {
     });
   }, [router]);
 
-  function continueNext() {
+  async function continueNext() {
     const nextName = name.trim();
     const nextUsername = normalizeUsername(username).trim();
     const nextCity = city.city.trim();
@@ -63,6 +63,16 @@ export default function AboutPage() {
     if (!nextCity || !city.placeId) {
       setError("Pick a city from the suggestions.");
       return;
+    }
+    // Catch a taken username here, not at the end of onboarding
+    try {
+      const data = await fetchJson(`/api/users/handle?handle=${encodeURIComponent(nextUsername)}`);
+      if (data && typeof data === "object" && "available" in data && data.available === false) {
+        setError("That username is taken. Try another.");
+        return;
+      }
+    } catch {
+      // If the check itself fails, carry on: signup still refuses a taken username
     }
     const draft = getDraft();
     setDraft({

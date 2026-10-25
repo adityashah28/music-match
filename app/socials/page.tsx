@@ -98,8 +98,10 @@ export default function SocialsPage() {
       setUserId(id);
       setUserToken(token);
       router.push("/finding");
-    } catch {
-      setError("Couldn't create your profile. Try again.");
+    } catch (err) {
+      // Someone took the username since the About step: say so, so they can go back and change it
+      const taken = err instanceof Error && /username is taken/i.test(err.message);
+      setError(taken ? "That username was just taken. Go back to About and pick another." : "Couldn't create your profile. Try again.");
       setBusy(false);
     }
   }

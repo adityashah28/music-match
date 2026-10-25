@@ -266,6 +266,22 @@ async function replaceArtists(snapshot: DataSnapshot, userId: string, inputs: Ar
   }
 }
 
+/** Usernames compare ignoring capitals and a leading "@" ("@Maya" and "maya" are the same). */
+function handleKey(handle: string): string {
+  return handle.trim().replace(/^@+/, "").toLowerCase();
+}
+
+function handleTaken(snapshot: DataSnapshot, handle: string, exceptUserId?: string): boolean {
+  const key = handleKey(handle);
+  return snapshot.users.some((user) => user.id !== exceptUserId && handleKey(user.handle) === key);
+}
+
+function assertHandleFree(snapshot: DataSnapshot, handle: string, exceptUserId?: string) {
+  if (handleTaken(snapshot, handle, exceptUserId)) {
+    throw new StoreError(409, "That username is taken. Try another.");
+  }
+}
+
 async function insertUser(snapshot: DataSnapshot, body: CreateUserBody): Promise<string> {
   // A profile signs in with a verified phone number or a verified Google account
   const authUserId = body.authUserId?.trim() || null;
@@ -278,6 +294,7 @@ async function insertUser(snapshot: DataSnapshot, body: CreateUserBody): Promise
   }
   const name = required(body.name, "Name", 80);
   const handle = required(body.handle, "Handle", 32);
+  assertHandleFree(snapshot, handle);
   const city = required(body.city, "City", 80);
   const age = requireAge(body.age, "Age");
   const ageMin = requireAge(body.ageMin, "Youngest age");
@@ -314,7 +331,11 @@ async function patchUser(snapshot: DataSnapshot, id: string, body: UpdateUserBod
   const user = snapshot.users.find((row) => row.id === id);
   if (!user) throw new StoreError(404, "User not found");
   if (body.name !== undefined) user.name = required(body.name, "Name", 80);
-  if (body.handle !== undefined) user.handle = required(body.handle, "Handle", 32);
+  if (body.handle !== undefined) {
+    const handle = required(body.handle, "Handle", 32);
+    assertHandleFree(snapshot, handle, id);
+    user.handle = handle;
+  }
   if (body.avatarUrl !== undefined) {
     user.avatarUrl = typeof body.avatarUrl === "string" ? body.avatarUrl.trim().slice(0, 500_000) || null : null;
   }
@@ -1498,6 +1519,15 @@ export async function uploadAvatar(userId: string, rawBytes: Uint8Array, content
   const { data } = client.storage.from("avatars").getPublicUrl(path);
   // Bust any CDN/browser cache of the previous photo at this same path.
   return `${data.publicUrl}?v=${Date.now()}`;
+}
+
+/** Whether a username is free, for checking during onboarding before signup. */
+export async function isHandleAvailable(handle: string): Promise<boolean> {
+  try {
+    return await read((snapshot) => !handleTaken(snapshot, handle));
+  } catch (error) {
+    throw wrap(error);
+  }
 }
 
 export async function getUser(id: string): Promise<UserProfile | null> {

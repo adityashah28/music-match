@@ -264,8 +264,9 @@ export default function MePage() {
         setArtists(profile.artists);
       }
       setSaved(true);
-    } catch {
-      setSaveError("Couldn't save your profile. Try again.");
+    } catch (err) {
+      const taken = err instanceof Error && /username is taken/i.test(err.message);
+      setSaveError(taken ? "That username is taken. Try another." : "Couldn't save your profile. Try again.");
     } finally {
       setSaving(false);
     }
