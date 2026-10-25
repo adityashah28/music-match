@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { GlassCard } from "@/components/GlassCard";
 import { MatchActions } from "@/components/MatchActions";
@@ -77,15 +78,35 @@ export function MatchCard({
               <span className="chip-label">demo</span>
             </span>
           ) : null}
-          <div className="absolute inset-x-4 bottom-3">
-            <p className="font-display truncate text-[2rem] font-normal leading-none tracking-tight text-[var(--foreground)]">
-              {match.name || match.handle}
-            </p>
-            <p className="mt-1 truncate text-sm font-normal text-[var(--muted)]">
-              {[match.handle !== match.name ? `@${match.handle}` : null, match.age != null ? String(match.age) : null, match.city]
-                .filter(Boolean)
-                .join(" · ")}
-            </p>
+          <div className="absolute inset-x-4 bottom-3 flex items-center gap-2.5">
+            {/* Google profile picture; initials for phone-only and demo profiles.
+                Same circular-avatar-chip styling as SharedFaces in MatchWhy.tsx. */}
+            {match.avatarUrl ? (
+              <Image
+                src={match.avatarUrl}
+                alt=""
+                width={40}
+                height={40}
+                className="h-10 w-10 shrink-0 rounded-full border-2 border-[var(--surface)] bg-[var(--surface-soft)] object-cover"
+              />
+            ) : (
+              <div
+                aria-hidden
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-[var(--surface)] bg-[var(--surface-soft)] text-sm font-semibold text-[var(--foreground)]"
+              >
+                {(match.name || match.handle || "?").trim().charAt(0).toUpperCase()}
+              </div>
+            )}
+            <div className="min-w-0">
+              <p className="font-display truncate text-[2rem] font-normal leading-none tracking-tight text-[var(--foreground)]">
+                {match.name || match.handle}
+              </p>
+              <p className="mt-1 truncate text-sm font-normal text-[var(--muted)]">
+                {[match.handle !== match.name ? `@${match.handle}` : null, match.age != null ? String(match.age) : null, match.city]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </p>
+            </div>
           </div>
         </div>
         <div className="tone-scope px-4 pt-4" style={toneVars}>
