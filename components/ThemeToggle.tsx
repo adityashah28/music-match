@@ -102,7 +102,10 @@ export function ThemeToggle() {
         applyTheme(next);
       });
     };
+    let finished = false;
     const done = () => {
+      if (finished) return;
+      finished = true;
       delete root.dataset.themeSwitching;
       switching = false;
     };
@@ -123,6 +126,8 @@ export function ThemeToggle() {
     const frames = revealFrames(ox, oy, width, height);
 
     switching = true;
+    // Hard stop so a skipped/interrupted view transition can never leave the toggle dead
+    const failSafe = window.setTimeout(done, REVEAL_MS + 200);
     const transition = document.startViewTransition(update);
     transition.ready
       .then(() => {
@@ -132,7 +137,16 @@ export function ThemeToggle() {
         );
       })
       .catch(() => {});
-    transition.finished.then(done, done);
+    transition.finished.then(
+      () => {
+        window.clearTimeout(failSafe);
+        done();
+      },
+      () => {
+        window.clearTimeout(failSafe);
+        done();
+      },
+    );
   }
 
   const label = theme === "dark" ? "Switch to light mode" : "Switch to dark mode";
