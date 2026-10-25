@@ -1,4 +1,4 @@
-// Deezer's public API: no key or login needed. Used by the seed scripts.
+// Deezer's public API: no key or login needed. Used by the seed scripts and artist enrichment.
 // Keep calls under ~50 requests per 5 seconds or Deezer starts refusing them.
 export type DeezerArtist = {
   id: number;

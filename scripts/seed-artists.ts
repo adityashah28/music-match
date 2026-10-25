@@ -6,8 +6,8 @@
 import { SCENES } from "./data/scenes";
 import { normalizeName } from "@/lib/normalize";
 import { supabase } from "./lib/db";
-import { getDeezerRelated, searchDeezerArtists } from "./lib/deezer";
-import { fillMissingColors, saveDeezerArtists } from "./lib/artists";
+import { getDeezerRelated, searchDeezerArtists } from "@/lib/deezer";
+import { fillMissingColors, saveDeezerArtists } from "@/lib/deezer-artists";
 
 // Deezer allows about 50 requests per 5 seconds; stay well under it
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -56,7 +56,7 @@ async function main() {
       if (!exact) {
         notFound.push(name);
       } else {
-        const [saved] = await saveDeezerArtists([exact]);
+        const [saved] = await saveDeezerArtists(supabase, [exact]);
         await supabase.from("artists").update({ genres: scenes }).eq("id", saved.id);
         seededIds.push(saved.id);
         process.stdout.write(".");
@@ -80,7 +80,7 @@ async function main() {
   for (const artist of needRelated ?? []) {
     try {
       const related = await getDeezerRelated(Number(artist.deezer_id), 10);
-      const saved = await saveDeezerArtists(related);
+      const saved = await saveDeezerArtists(supabase, related);
       const links = saved
         .filter((r) => r.id !== artist.id)
         .map((r, i) => ({ artist_id: artist.id, related_artist_id: r.id, rank: i + 1 }));
@@ -105,7 +105,7 @@ async function main() {
   // Related-only artists get their color later, when someone searches for them.
   console.log("\n\nComputing background colors...");
   for (let i = 0; i < seededIds.length; i += 5) {
-    await Promise.all(seededIds.slice(i, i + 5).map((id) => fillMissingColors([id])));
+    await Promise.all(seededIds.slice(i, i + 5).map((id) => fillMissingColors(supabase, [id])));
     process.stdout.write(".");
   }
 

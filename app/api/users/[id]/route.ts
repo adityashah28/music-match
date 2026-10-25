@@ -1,4 +1,6 @@
+import { after } from "next/server";
 import { requireUser } from "@/lib/auth";
+import { enrichArtists } from "@/lib/enrich";
 import { errorResponse, readJson } from "@/lib/errors";
 import { getUser, updateUser } from "@/lib/store";
 import type { ArtistInput, UpdateUserBody } from "@/lib/types";
@@ -79,6 +81,8 @@ export async function PATCH(
     if (Array.isArray(json.artists)) body.artists = json.artists as ArtistInput[];
 
     const user = await updateUser(id, body);
+    // After responding: fetch Deezer's similar artists for newly added artists that don't have them
+    if (body.artists) after(() => enrichArtists(user.artists.map((artist) => artist.name)));
     return Response.json(user);
   } catch (error) {
     return errorResponse(error);

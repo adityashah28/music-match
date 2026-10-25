@@ -6,9 +6,9 @@
 // Safe to re-run: shows are updated in place and never deleted, so RSVPs survive.
 import { normalizeName } from "@/lib/normalize";
 import { supabase } from "./lib/db";
-import { getDeezerRelated, searchDeezerArtists } from "./lib/deezer";
+import { getDeezerRelated, searchDeezerArtists } from "@/lib/deezer";
 import { ticketmasterEvents, ticketmasterRow } from "@/lib/ticketmaster";
-import { fillMissingColors, saveDeezerArtists } from "./lib/artists";
+import { fillMissingColors, saveDeezerArtists } from "@/lib/deezer-artists";
 import {
   BANDSINTOWN_CITIES,
   fromBandsintownItems,
@@ -133,8 +133,8 @@ async function main() {
         .filter((r) => normalizeName(r.name) === key)
         .sort((a, b) => b.nb_fan - a.nb_fan)[0];
       if (exact) {
-        const [saved] = await saveDeezerArtists([exact]);
-        const related = (await saveDeezerArtists(await getDeezerRelated(exact.id, 10))).filter((r) => r.id !== saved.id);
+        const [saved] = await saveDeezerArtists(supabase, [exact]);
+        const related = (await saveDeezerArtists(supabase, await getDeezerRelated(exact.id, 10))).filter((r) => r.id !== saved.id);
         if (related.length) {
           await supabase
             .from("artist_related")
@@ -152,7 +152,7 @@ async function main() {
     await sleep(300); // two Deezer calls per artist
   }
   for (let i = 0; i < newIds.length; i += 5) {
-    await Promise.all(newIds.slice(i, i + 5).map((id) => fillMissingColors([id])));
+    await Promise.all(newIds.slice(i, i + 5).map((id) => fillMissingColors(supabase, [id])));
   }
 
   // How useful is this for matching? Count shows by artists someone could actually pick.

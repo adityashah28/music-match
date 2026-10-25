@@ -1,3 +1,5 @@
+import { after } from "next/server";
+import { enrichArtists } from "@/lib/enrich";
 import { errorResponse, readJson, StoreError } from "@/lib/errors";
 import { googleFromProof, phoneFromProof, type GoogleIdentity } from "@/lib/supabase-auth";
 import { normalizePhone } from "@/lib/phone";
@@ -77,6 +79,8 @@ export async function POST(request: Request) {
     };
 
     const user = await createUser(body);
+    // After responding: fetch Deezer's similar artists for picks that don't have them yet
+    after(() => enrichArtists(user.artists.map((artist) => artist.name)));
     return Response.json(user);
   } catch (error) {
     return errorResponse(error);

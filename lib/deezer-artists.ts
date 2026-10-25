@@ -1,9 +1,9 @@
-// Saving Deezer artists into the artists table, for the seed scripts.
+// Saving Deezer artists into the artists table, for the seed scripts and artist enrichment (lib/enrich.ts).
 // Uses the app's normalizeName and color helper so seeded rows look exactly like ones the app creates.
 import { dominantColorFromImage } from "@/lib/color";
 import { normalizeName } from "@/lib/normalize";
-import { supabase } from "./db";
-import { realImage, type DeezerArtist } from "./deezer";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { realImage, type DeezerArtist } from "@/lib/deezer";
 
 export type SavedArtist = { id: string; name: string; normalized_name: string };
 
@@ -11,7 +11,7 @@ const COLUMNS = "id, name, normalized_name";
 
 // Insert new artists or refresh existing ones, matched on normalized name.
 // Returns them in the same order they came in (Deezer's relevance order).
-export async function saveDeezerArtists(found: DeezerArtist[]): Promise<SavedArtist[]> {
+export async function saveDeezerArtists(supabase: SupabaseClient, found: DeezerArtist[]): Promise<SavedArtist[]> {
   // Two Deezer results can normalize to the same name: keep the one with more fans
   const byName = new Map<string, DeezerArtist>();
   for (const a of found) {
@@ -81,7 +81,7 @@ export async function saveDeezerArtists(found: DeezerArtist[]): Promise<SavedArt
 }
 
 // Fill in the background-gradient color for artists that have a photo but no color yet
-export async function fillMissingColors(ids: string[]) {
+export async function fillMissingColors(supabase: SupabaseClient, ids: string[]) {
   if (ids.length === 0) return;
   const { data } = await supabase
     .from("artists")
