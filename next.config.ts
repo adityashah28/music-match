@@ -42,6 +42,12 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "lh3.googleusercontent.com",
       },
+      // Uploaded profile photos, stored in the Supabase "avatars" bucket
+      {
+        protocol: "https",
+        hostname: "**.supabase.co",
+        pathname: "/storage/v1/object/public/**",
+      },
     ],
     // Portraits change rarely; cache optimized variants longer than the 4h default.
     minimumCacheTTL: 60 * 60 * 24 * 7,

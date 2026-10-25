@@ -40,7 +40,7 @@ export type UserPublic = {
 
 export type UserProfile = UserPublic & {
   phone: string | null;
-  /** Google profile picture, for profiles that signed in with Google. */
+  /** Set from Google at signup, or uploaded by the person afterward on /me. */
   avatarUrl: string | null;
   ageMin: number | null;
   ageMax: number | null;
@@ -81,6 +81,7 @@ export type CreatedUser = UserProfile & { token: string };
 export type UpdateUserBody = {
   name?: string | null;
   handle?: string | null;
+  avatarUrl?: string | null;
   city?: string | null;
   cityLat?: number | null;
   cityLng?: number | null;

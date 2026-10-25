@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ChangeEvent } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { AgeNumberInput } from "@/components/AgeNumberInput";
@@ -66,6 +66,9 @@ export default function MePage() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [saved, setSaved] = useState(false);
+
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarError, setAvatarError] = useState("");
 
   useEffect(() => {
     const id = getUserId();
@@ -268,26 +271,100 @@ export default function MePage() {
     }
   }
 
+  const ACCEPTED_PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"];
+  const MAX_PHOTO_BYTES = 8 * 1024 * 1024;
+
+  async function handlePhotoChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    if (!ACCEPTED_PHOTO_TYPES.includes(file.type)) {
+      setAvatarError("Choose a JPEG, PNG, or WebP image.");
+      return;
+    }
+    if (file.size > MAX_PHOTO_BYTES) {
+      setAvatarError("That photo is too large. Max 8MB.");
+      return;
+    }
+
+    const id = profileId || getUserId();
+    if (!id) return;
+
+    setAvatarError("");
+    setAvatarUploading(true);
+    const previousAvatarUrl = avatarUrl;
+    const localPreview = URL.createObjectURL(file);
+    setAvatarUrl(localPreview);
+
+    try {
+      const form = new FormData();
+      form.append("photo", file);
+      const data = await fetchJson(`/api/users/${encodeURIComponent(id)}/avatar`, {
+        method: "POST",
+        body: form,
+      });
+      const profile = normalizeProfile(data, id);
+      setAvatarUrl(profile?.avatarUrl ?? previousAvatarUrl);
+    } catch {
+      setAvatarError("Couldn't upload that photo. Try again.");
+      setAvatarUrl(previousAvatarUrl);
+    } finally {
+      URL.revokeObjectURL(localPreview);
+      setAvatarUploading(false);
+    }
+  }
+
   return (
     <GradientBackground>
       <main className="screen screen-nav flex min-h-dvh flex-col">
-        {/* Google profile picture; initials for profiles without one (phone sign-in) */}
-        {avatarUrl ? (
-          <Image
-            src={avatarUrl}
-            alt=""
-            width={72}
-            height={72}
-            className="mb-4 h-[72px] w-[72px] rounded-full border border-[var(--border)] object-cover"
-          />
-        ) : !loading ? (
-          <div
-            aria-hidden
-            className="mb-4 flex h-[72px] w-[72px] items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface-soft)] text-2xl font-semibold text-[var(--muted)]"
-          >
-            {(name || handle || "?").trim().charAt(0).toUpperCase()}
-          </div>
-        ) : null}
+        {/* Google or uploaded profile picture; initials for profiles without one */}
+        <div className="relative mb-4 h-[72px] w-[72px] shrink-0">
+          {avatarUrl ? (
+            // A freshly chosen file previews as a blob: URL before the upload finishes;
+            // next/image doesn't optimize those, so fall back to a plain <img> for it.
+            avatarUrl.startsWith("blob:") || avatarUrl.startsWith("data:") ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={avatarUrl}
+                alt=""
+                className="h-[72px] w-[72px] rounded-full border border-[var(--border)] object-cover"
+              />
+            ) : (
+              <Image
+                src={avatarUrl}
+                alt=""
+                width={72}
+                height={72}
+                className="h-[72px] w-[72px] rounded-full border border-[var(--border)] object-cover"
+              />
+            )
+          ) : !loading ? (
+            <div
+              aria-hidden
+              className="flex h-[72px] w-[72px] items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface-soft)] text-2xl font-semibold text-[var(--muted)]"
+            >
+              {(name || handle || "?").trim().charAt(0).toUpperCase()}
+            </div>
+          ) : null}
+          {!loading ? (
+            <label
+              className={`absolute -bottom-1 -right-1 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] transition duration-200 ease-out hover:bg-[var(--surface-soft)] ${avatarUploading ? "pointer-events-none opacity-60" : ""}`}
+              title="Change photo"
+            >
+              <span className="sr-only">Change profile photo</span>
+              <EditPhotoIcon />
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="sr-only"
+                disabled={avatarUploading}
+                onChange={handlePhotoChange}
+              />
+            </label>
+          ) : null}
+        </div>
+        {avatarError ? <p className="mb-3 text-sm text-[var(--muted)]">{avatarError}</p> : null}
         <p className="text-sm font-normal uppercase tracking-[0.18em] text-[var(--muted)]">
           {handle || "Your profile"}
         </p>
@@ -599,5 +676,23 @@ function SocialHandleField({
         />
       </div>
     </div>
+  );
+}
+
+function EditPhotoIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      className="h-3.5 w-3.5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+    </svg>
   );
 }

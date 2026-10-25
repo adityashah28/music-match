@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import sharp from "sharp";
 import { dominantColorFromImage } from "@/lib/color";
 import { distanceKm, type Coords } from "@/lib/geocode";
 import { GENRES, isGenre } from "@/lib/genres";
@@ -314,6 +315,9 @@ async function patchUser(snapshot: DataSnapshot, id: string, body: UpdateUserBod
   if (!user) throw new StoreError(404, "User not found");
   if (body.name !== undefined) user.name = required(body.name, "Name", 80);
   if (body.handle !== undefined) user.handle = required(body.handle, "Handle", 32);
+  if (body.avatarUrl !== undefined) {
+    user.avatarUrl = typeof body.avatarUrl === "string" ? body.avatarUrl.trim().slice(0, 500_000) || null : null;
+  }
   if (body.city !== undefined) user.city = required(body.city, "City", 80);
   if (body.cityLat !== undefined) user.cityLat = optionalCoord(body.cityLat);
   if (body.cityLng !== undefined) user.cityLng = optionalCoord(body.cityLng);
@@ -1408,6 +1412,92 @@ export async function updateUser(id: string, body: UpdateUserBody): Promise<User
   } catch (error) {
     throw wrap(error);
   }
+}
+
+const AVATAR_EXT: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+};
+
+/**
+ * The browser-supplied Content-Type is just a request header — trivial to fake
+ * (e.g. label an .exe as "image/png"). Checking the file's own magic bytes
+ * against what it claims to be stops that: a mislabeled file is caught before
+ * it's ever written anywhere, public bucket or not.
+ */
+function matchesClaimedType(bytes: Uint8Array, contentType: string): boolean {
+  const at = (offset: number, expected: number[]) =>
+    expected.every((value, index) => bytes[offset + index] === value);
+
+  if (contentType === "image/png") {
+    return at(0, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  }
+  if (contentType === "image/jpeg") {
+    return at(0, [0xff, 0xd8, 0xff]);
+  }
+  if (contentType === "image/webp") {
+    return at(0, [0x52, 0x49, 0x46, 0x46]) && at(8, [0x57, 0x45, 0x42, 0x50]); // "RIFF"...."WEBP"
+  }
+  return false;
+}
+
+/**
+ * Stores an uploaded profile photo and returns the URL to save as avatarUrl.
+ * With Supabase configured, uploads to the public "avatars" bucket (overwriting
+ * this person's previous photo). Without it (dev without Supabase), the image
+ * is small enough to just become a data: URI stored directly in avatarUrl.
+ */
+export async function uploadAvatar(userId: string, rawBytes: Uint8Array, contentType: string): Promise<string> {
+  const ext = AVATAR_EXT[contentType];
+  if (!ext) throw new StoreError(400, "Photo must be a JPEG, PNG, or WebP image");
+  if (!matchesClaimedType(rawBytes, contentType)) {
+    throw new StoreError(400, "That file doesn't look like a valid image");
+  }
+
+  // Re-encode through sharp before storing anything: this both decodes-then-
+  // rebuilds the image (sharp rejects anything it can't actually parse as
+  // that format, and caps absurd pixel counts by default, guarding against
+  // a tiny file that decompresses into a memory-exhausting bitmap) and drops
+  // all metadata by default — phone photos often carry embedded GPS
+  // coordinates, which would otherwise sit in a public file forever.
+  let bytes: Buffer;
+  try {
+    const image = sharp(rawBytes);
+    bytes =
+      ext === "png"
+        ? await image.png().toBuffer()
+        : ext === "webp"
+          ? await image.webp().toBuffer()
+          : await image.jpeg().toBuffer();
+  } catch {
+    throw new StoreError(400, "Couldn't read that image. Try a different file.");
+  }
+
+  const config = supabaseConfig();
+  if (!config) {
+    if (bytes.byteLength > 350_000) {
+      throw new StoreError(400, "Photo is too large for local dev without Supabase storage. Try a smaller image.");
+    }
+    return `data:${contentType};base64,${bytes.toString("base64")}`;
+  }
+
+  const client = createClient(config.url, config.key, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  });
+  const path = `${userId}/avatar.${ext}`;
+  // Switching file types (e.g. jpg -> png) would otherwise leave the old
+  // photo sitting at its old public URL forever; remove the other possible
+  // extensions for this person before writing the new one.
+  const staleExts = Object.values(AVATAR_EXT).filter((other) => other !== ext);
+  await client.storage.from("avatars").remove(staleExts.map((other) => `${userId}/avatar.${other}`));
+  const { error } = await client.storage
+    .from("avatars")
+    .upload(path, bytes, { contentType, upsert: true });
+  if (error) fail(error.message);
+  const { data } = client.storage.from("avatars").getPublicUrl(path);
+  // Bust any CDN/browser cache of the previous photo at this same path.
+  return `${data.publicUrl}?v=${Date.now()}`;
 }
 
 export async function getUser(id: string): Promise<UserProfile | null> {
