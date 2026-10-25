@@ -542,6 +542,7 @@ h3 {
  */
 .menu-card {
   --menu-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --menu-text-ease: cubic-bezier(0.33, 1, 0.68, 1);
   transform-origin: top right;
   clip-path: inset(0 round var(--radius));
   transition:
@@ -555,9 +556,8 @@ h3 {
   transform: translateY(-6px) scale(0.96);
   clip-path: inset(0 0 100% 40% round var(--radius));
   pointer-events: none;
-  transition-duration: 0.2s, 0.22s, 0.22s;
-  transition-delay: 0.04s;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.8, 0.4);
+  transition-duration: 0.18s, 0.2s, 0.2s;
+  transition-timing-function: cubic-bezier(0.4, 0, 1, 1);
 }
 
 @starting-style {
@@ -568,60 +568,41 @@ h3 {
   }
 }
 
+/* Links settle in once the card is mostly revealed; on close they just fade with the card. */
 .menu-item {
-  --menu-delay: calc(0.11s + var(--i, 0) * 0.055s);
+  --menu-delay: calc(0.1s + var(--i, 0) * 0.03s);
   transition:
-    opacity 0.3s var(--menu-ease) var(--menu-delay),
-    transform 0.4s var(--menu-ease) var(--menu-delay),
+    opacity 0.24s var(--menu-text-ease) var(--menu-delay),
+    transform 0.24s var(--menu-text-ease) var(--menu-delay),
     color 0.2s ease-out,
     background-color 0.2s ease-out;
-}
-
-.menu-card[data-state="closed"] .menu-item {
-  opacity: 0;
-  transform: translateY(-4px);
-  transition-duration: 0.12s, 0.16s, 0.2s, 0.2s;
-  transition-delay: 0s;
-  transition-timing-function: ease-in;
 }
 
 @starting-style {
   .menu-card[data-state="open"] .menu-item {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(3px);
   }
 }
 
 .menu-rule {
   height: 1px;
   background: var(--border);
-  transform-origin: left center;
-  transition: transform 0.5s var(--menu-ease) calc(0.14s + var(--i, 0) * 0.055s);
 }
 
-.menu-card[data-state="closed"] .menu-rule {
-  transform: scaleX(0);
-  transition-duration: 0.14s;
-  transition-delay: 0s;
-}
-
-@starting-style {
-  .menu-card[data-state="open"] .menu-rule {
-    transform: scaleX(0);
-  }
-}
-
-/* Menu ⇄ Close: the outgoing word slides away as the other arrives. */
+/* Menu ⇄ Close: a quick crossfade in place. */
 .menu-toggle-label {
   grid-area: 1 / 1;
   transition:
-    opacity 0.2s ease-out,
-    transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+    opacity 0.15s ease-out,
+    transform 0.15s ease-out,
+    filter 0.15s ease-out;
 }
 
 .menu-toggle-label[data-active="false"] {
   opacity: 0;
-  transform: translateY(var(--menu-label-shift));
+  transform: scale(0.94);
+  filter: blur(2px);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -639,15 +620,10 @@ h3 {
     transition: color 0.2s ease-out, background-color 0.2s ease-out;
   }
 
-  .menu-card .menu-rule,
-  .menu-card[data-state="closed"] .menu-rule {
-    transform: none;
-    transition: none;
-  }
-
   .menu-toggle-label,
   .menu-toggle-label[data-active="false"] {
     transform: none;
+    filter: none;
     transition: opacity 0.15s linear;
   }
 }

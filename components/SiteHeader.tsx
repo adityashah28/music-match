@@ -194,7 +194,6 @@ export function SiteHeader() {
                       className="menu-toggle-label"
                       data-active={!menuOpen}
                       aria-hidden={menuOpen}
-                      style={{ "--menu-label-shift": "-120%" } as CSSProperties}
                     >
                       <span className="btn-label">Menu</span>
                     </span>
@@ -202,7 +201,6 @@ export function SiteHeader() {
                       className="menu-toggle-label"
                       data-active={menuOpen}
                       aria-hidden={!menuOpen}
-                      style={{ "--menu-label-shift": "120%" } as CSSProperties}
                     >
                       <span className="btn-label">Close</span>
                     </span>
@@ -232,11 +230,7 @@ export function SiteHeader() {
               return (
                 <Fragment key={href}>
                   {index > 0 ? (
-                    <span
-                      aria-hidden="true"
-                      className="menu-rule mx-4"
-                      style={{ "--i": index - 1 } as CSSProperties}
-                    />
+                    <span aria-hidden="true" className="menu-rule mx-4" />
                   ) : null}
                   <Link
                     href={href}
