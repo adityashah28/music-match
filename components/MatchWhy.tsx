@@ -53,29 +53,38 @@ export function MatchShowRow({ show }: { show: MatchShowItem }) {
 /** Shared artists, the label, and one upcoming show: the reason this person is on the list. */
 export function MatchWhy({
   label,
+  labelColor,
   why,
   sharedArtists,
   show,
 }: {
   label: string;
+  /** Text color for the strength label — a real match gets the shared artist's tone, a weak one stays neutral. */
+  labelColor: string | null;
   why: string;
   sharedArtists: DraftArtist[];
   show: MatchShowItem | null;
 }) {
+  const hasSharedArtists = sharedArtists.length > 0;
   return (
     <div>
-      <div className="flex items-center gap-3">
-        <SharedFaces artists={sharedArtists} />
-        <p className="min-w-0 flex-1 text-sm font-semibold leading-tight text-[var(--foreground)]">
-          {sharedCount(sharedArtists.length)}
-        </p>
-        <span className="pill shrink-0 bg-[var(--foreground)] px-2.5 py-1 text-xs font-normal text-white">
-          <span className="chip-label">{label}</span>
+      <div className="flex items-baseline gap-1.5 text-xs">
+        <span className="font-semibold" style={labelColor ? { color: labelColor } : undefined}>
+          <span className={labelColor ? undefined : "text-[var(--muted)]"}>{label}</span>
         </span>
+        <span aria-hidden="true" className="text-[var(--border)]">
+          ·
+        </span>
+        <span className="text-[var(--muted)]">{sharedCount(sharedArtists.length)}</span>
       </div>
-      <p className="mt-2 truncate text-sm font-normal text-[var(--muted)]">
-        {sharedArtists.length > 0 ? sharedNames(sharedArtists) : why}
+      <p className="mt-1.5 line-clamp-2 text-base font-semibold leading-snug text-[var(--foreground)]">
+        {hasSharedArtists ? sharedNames(sharedArtists) : why}
       </p>
+      {hasSharedArtists ? (
+        <div className="mt-3">
+          <SharedFaces artists={sharedArtists} />
+        </div>
+      ) : null}
       {show ? (
         <div className="mt-3">
           <MatchShowRow show={show} />
